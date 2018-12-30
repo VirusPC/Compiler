@@ -1,0 +1,36 @@
+program->constDefinations_varDefinations_statements
+
+constDefinations->constDefination_constDefinations|constDefination
+constDefination->44_type_assignments_2
+
+
+varDefinations->varDefination_varDefinations|varDefination
+varDefination->type_definations_22
+definations->defination_20_definations|defination
+defination->80|80_4_81
+
+statements->statement_statements|statement
+statement->assignment|condition|loop|printf|scanf|composite
+assignment->80_4_expression
+
+operator->
+
+0
+    Plus(0, "*"), Minus(1, "-"), Mul(2, "*"), Div(3, "/"), Equal(4, "="), DEqual(5, "=="),
+    Less(6, "<"), More(7, ">"), LE(8, "<="), ME(9, ">=");
+
+20
+    Comma(0, ","), Colon(1, ":"), Semicolon(2, ";"), LParen(3, "("), RParen(4, ")"),
+    LBrace(5, "{"), RBrace(6, "}");
+40
+    Auto(0), Break(1), Case(2), Char(3), Const(4), Continue(5),
+    Default(6), Do(7), Double(8), Eles(9), Enum(10), Extern(11),
+    Float(12), For(13), Goto(14), If(15), Int(16), Long(17), Register(18),
+    Return(19), Short(20), Signed(21), Sizeof(22), Static(23), Struct(24),
+    Switch(25), Typedef(26), Union(27), Usigned(28), Void(29), Volatile(30), While(31);
+
+    public static final int IDENTIFIER_ID = 80;
+
+    public static final int NUMBER_ID = 81;
+
+    public static final int LETTER_ID = 82 ;
