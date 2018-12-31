@@ -22,8 +22,9 @@ public class Parser {
     private Set<String> vnSet; // 非终结符集合
     private Set<String> vtSet; // 终结符集合
     private Map<String, Integer> toEmpty; //非终结符是否可以推出空串 1是 0未定 -1否
+    private Map<String, Set<String>> firstVn; //所有非终结符的first集
 
-    private List<List<int[]>> itemLists; // 项目集 Integer[0]为grammar序号， Integer[1]为指针
+    private List<Set<Item>> itemSets; // 项目集
     private List<Map<String, Integer>> goTable; // 项目集的go()
     private boolean[] passedGrammar; // 标记走过的路径
 
@@ -38,6 +39,12 @@ public class Parser {
     public Parser(String path, String startSymbol) {
         createGrammars(path, startSymbol);
         fillToEmpty();
+        createFirstForVn();
+        List<String> ab = new ArrayList<String>();
+        ab.add("A");
+        ab.add("B");
+        Set<String> abSet = first(ab);
+        int a =1;
 //            init(path, startSymbol);
 //            extend();
 //            createItemLists();
@@ -49,7 +56,7 @@ public class Parser {
 //    }
     
     /**
-     * 初始化extendStartSymbol、vn、vt、grammars
+     * 读入文法
      * 
      * @param path
      * @param startSymbol
@@ -139,50 +146,244 @@ public class Parser {
     }
 
 
-    private void fillToEmpty(){
-        //创建toEmpt映射表 0未定 1是 -1否
+    /**
+     * 求出能推出EMPTY的非终结符，填入toEmpty
+     *  0未定 1是 -1否
+     */
+    private void fillToEmpty() {
         toEmpty = new HashMap<String, Integer>();
-        for(String word : vnSet){
+        for (String word : vnSet) {
             toEmpty.put(word, 0);
         }
-        //记录文法是否被删除
-        boolean[] deleted = new boolean[grammars.size()];
 
-        //List<List<String>> grammarsForVn = new ArrayList<List<String>>();
-        for(String word : vnSet){
-            for(int i=0; i<grammars.size(); i++){
-                List<String> grammar = grammars.get(i);
-                if(grammars.get(0).equals(word)){
-                    //grammarsForVn.add(grammar);
-                }
-            }
-//            for(List<String> grammar : grammarsForVn){
-//                if(EMPTY.equals(grammar.get(1))){
-//                    toEmpty.put(grammar.get(0), 1);
-//                    deleted[i] = true;
-//                }
-//            }
+        List<List<String>> copyOfGrammars = new ArrayList<List<String>>();
+        for(List<String> grammar: grammars){
+            copyOfGrammars.add(new ArrayList<String>(grammar));
         }
 
-        for(int i=0; i<grammars.size(); i++) {
-            List<String> grammar = grammars.get(i);
-            if(EMPTY.equals(grammar.get(1))){
+        /**
+         * 1. 删除所有右部含有终结符的产生式，若这使得以某一非终结符为左部的所有产生式都被删除，
+         * 则将toEmpty中对应该非终结符的标记值置为否（-1），说明该非终结符不能推出空
+         */
+        for (int i=0; i<copyOfGrammars.size(); i++) {
+            List<String> grammar = copyOfGrammars.get(i);
+           for (String word : grammar) {
+                if (vtSet.contains(word)) {
+                    copyOfGrammars.remove(grammar);
+                    i--;
+                    break;
+                }
+            }
+        }
+        Set<String> reamainedVn = new HashSet<String>();
+        for (List<String> grammar: copyOfGrammars) {
+                reamainedVn.add(grammar.get(0));
+        }
+        Set<String> notToEmptyVn = new HashSet<String>(vnSet);
+        notToEmptyVn.removeAll(reamainedVn);
+        for (String vn : notToEmptyVn) {
+            toEmpty.put(vn, -1);
+        }
+
+        /**
+         * 2. 若某一非终结符的某一产生式右部为EMPTY，则将toEmpty中对应该非终结符的标志置为是（1），
+         * 并从文法中删除该非终结符的所有产生式。
+         */
+        for (List<String> grammar : copyOfGrammars) {
+            if( EMPTY.equals(grammar.get(1))){
                 toEmpty.put(grammar.get(0), 1);
-                deleted[i] = true;
-            } else {
-                for (int j=1; j<grammar.size(); j++) {
-                    if (vtSet.contains(grammar.get(j))) {
-                        toEmpty.put(grammar.get(0), -1);
-                        deleted[i] = true;
-                        break;
+            }
+        }
+       for(String v : toEmpty.keySet()){
+           if(toEmpty.get(v) == 1){
+               for(int i=0; i<copyOfGrammars.size(); i++){
+                   List<String> grammar = copyOfGrammars.get(i);
+                   if(grammar.get(0).equals(v)){
+                       copyOfGrammars.remove(i);
+                       i--;
+                   }
+               }
+           }
+       }
+        /**
+         * 3. 经以上两个步骤，删除了右部为空或右部有终结符的语法，即剩下的为右部全部为非终结符的语法
+         *  接下来，扫描产生式右部的每一符号
+         */
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            /**  3.1 若扫描到的非终结符在toEmpty中对应的标志是“是”（1），则删去该非终结符；
+             若这使得产生式右部为空，则将产生式左部的非终结符在toEmpty中对应的标志位改为“是”（1），
+             并删除以该非终结符为左部的所有产生式
+             */
+            for (int i = 0; i < copyOfGrammars.size(); i++) {
+                List<String> grammar = copyOfGrammars.get(i);
+                for (int j = 1; j < grammar.size(); j++) {
+                    String word = grammar.get(j);
+                    if (toEmpty.get(word) == 1) {
+                        grammar.remove(j);
+                        j--;
+                    }
+                    if (grammar.size() == 1) {
+                        changed = true;
+                        String w = grammar.get(0);
+                        toEmpty.put(w, 1);
+                        for (int k = 0; k < copyOfGrammars.size(); k++) {
+                            List<String> g = copyOfGrammars.get(k);
+                            if (g.get(0).equals(w)) {
+                                copyOfGrammars.remove(k);
+                                k--;
+                            }
+                        }
+                    }
+                }
+            }
+
+
+            /**   3.2若所扫描到的非终结符号在toEmpty中对应的标志是“否”，则删去该产生式；
+             若这使产生式左部非终结符的有关产生式都被删去，则把在toEmpty中该非终结符对应的标志改为“否”（-1）
+             */
+            List<List<String>> deletedGrammars = new ArrayList<List<String>>();
+            Set<String> deletedV = new HashSet<String>();
+            for (int i = 0; i < copyOfGrammars.size(); i++) {
+                List<String> grammar = copyOfGrammars.get(i);
+                for (int j = 1; j < grammar.size(); j++) {
+                    String word = grammar.get(j);
+                    if (toEmpty.get(word) == -1) {
+                        deletedGrammars.add(grammar);
+                        deletedV.add(grammar.get(0));
+                    }
+
+                }
+            }
+            copyOfGrammars.removeAll(deletedGrammars);
+
+            reamainedVn.clear();
+            for (List<String> grammar : copyOfGrammars) {
+                reamainedVn.add(grammar.get(0));
+            }
+            deletedV.removeAll(reamainedVn);
+            if(!deletedV.isEmpty()) {
+                changed = true;
+                for (String v : deletedV) {
+                    toEmpty.put(v, -1);
+                }
+            }
+        }
+    }
+
+
+    /**
+     * 对每一个文发符号X属于V，计算FIRST(X)
+     * @param parseV
+     * @return
+     */
+    private Set<String> firstForOneV(String parseV){
+        Set<String> firstSet = new HashSet<String>();
+        // 1.要分析的符号为终结符
+        if(vtSet.contains(parseV)){
+            firstSet.add(parseV);
+
+            // 2.要分析的符号为非终结符
+        }else if(vnSet.contains(parseV)){
+            int oldSize = -1;
+            while(oldSize!=firstSet.size()){
+                oldSize = firstSet.size();
+
+                //找到以该符号为左部的文法
+                for(List<String> grammar : grammars){
+                    if(!parseV.equals(grammar.get(0))){
+                        continue;
+                    }
+                    int pos=1;
+                    String parseVInRight = grammar.get(pos);
+                    // 2. && 3. 右部第一个为终结符或空
+                    if(EMPTY.equals(parseVInRight) || vtSet.contains(parseVInRight)){
+                        firstSet.add(parseVInRight);
+                    } else {//4.右部第一个为非终结符
+
+                        while(vnSet.contains(parseVInRight)
+                                &&toEmpty.get(parseVInRight)==1
+                                &&pos<grammar.size()-1){
+                            Set<String> subSet = firstForOneV((parseVInRight));
+                            subSet.remove(EMPTY);
+                            firstSet.addAll(subSet);
+                            parseVInRight = grammar.get(++pos);
+                        }
+                        firstSet.addAll(firstForOneV(parseVInRight));
                     }
                 }
             }
         }
-        int i = 1;
+        return firstSet;
     }
 
-//    /**
+
+    /**
+     * 创建所有非终结符的first集
+     */
+    private void createFirstForVn(){
+        firstVn = new HashMap<String, Set<String>>();
+        for(String v : vnSet) {
+            firstVn.put(v, firstForOneV(v));
+        }
+    }
+
+    /**
+     * 任意符号串的first集
+     */
+    private Set<String> first(List<String> wordList){
+        Set<String> firstSet = new HashSet<String>();
+        int pos = 0;
+        String parseWord = wordList.get(pos);
+        if(EMPTY.equals(parseWord)){
+            firstSet.add(EMPTY);
+        } else {
+            while (pos<wordList.size()-1 && vnSet.contains(parseWord) && toEmpty.get(parseWord)==1 ) {
+                Set<String> s = firstVn.get(parseWord);
+                s.remove(EMPTY);
+                firstSet.addAll(s);
+                parseWord = wordList.get(++pos);
+            }
+            if(vnSet.contains(parseWord)){
+                firstSet.addAll(firstVn.get(parseWord));
+            } else {
+                firstSet.add(parseWord);
+            }
+
+
+        }
+        return firstSet;
+    }
+
+    /**
+     * 闭包函数
+     */
+    private Set<Item> closure(Item firstItem){
+        Set<Item> itemSet = new HashSet<Item>();
+        itemSet.add(firstItem);
+
+
+
+        //for
+
+        return itemSet;
+    }
+
+    /**
+     * 创建项目集列表
+     */
+    private void createItemSets(){
+        Item initItem = new Item(0, 0, "#");
+        Set<Item> firstItemSet = closure(initItem);
+        itemSets = new ArrayList<Set<Item>>();
+        itemSets.add(firstItemSet);
+
+        //for(){}
+
+    }
+
+    //    /**
 //     * 创建项目集
 //     */
 //    private void createItemLists() {
