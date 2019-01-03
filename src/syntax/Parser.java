@@ -1,5 +1,12 @@
 package syntax;
 
+import intermediate.FourElement;
+import lexis.Info;
+import lexis.Reserve;
+import lexis.SemanticNode;
+import lexis.Word;
+
+import javax.swing.*;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -8,14 +15,21 @@ import java.lang.reflect.Array;
 import java.util.*;
 
 public class Parser {
-    public static String OVER = "#"; //结束符
-    public static String EMPTY = "ε"; //空
+    //public static String OVER = "#"; //结束符
+    public static String OVER = Reserve.Over.getId().toString(); //结束符
+    public static String EMPTY = "empty"; //空
     public static String LINK = "->"; //文法连接符
     public static String SEPARATOR = "|"; //文法分隔符
     public static String WORD_SEPARATOR = "_"; //单词分隔符
-    public static String POINT = "·"; //项目的点
+    //public static String POINT = "·"; //项目的点
     public static String EXTEND_START_SYMBOL = "extend"; //默认拓展开始符
+    public static String SHIFT = "S"; //移进
+    public static String ACC = "acc"; //完成
+    public static String BECOME = "r"; //规约
     public static int INITIAL_STATE = 0; //初始状态
+
+
+    private Map<String, Info> symbolTable = new HashMap<String, Info>();
 
     private List<List<String>> grammars; // 文法
     private String startSymbol;  // 开始符
@@ -23,13 +37,22 @@ public class Parser {
     private Set<String> vtSet; // 终结符集合
     private Map<String, Integer> toEmpty; //非终结符是否可以推出空串 1是 0未定 -1否
     private Map<String, Set<String>> firstVn; //所有非终结符的first集
-
-    private List<Set<Item>> itemSets; // 项目集
+    private List<Set<Item>> itemSetList; // 项目集
     private List<Map<String, Integer>> goTable; // 项目集的go()
-    private boolean[] passedGrammar; // 标记走过的路径
 
-    private List<Map<String, String>> actionTable; // action表
+    private List<Map<String, String>> actionTable; // action
     private List<Map<String, Integer>> gotoTable; // goto表
+
+    private Integer tempCount = 0;
+    Stack<String> symbolStack;//符号栈
+    Stack<Integer> stateStack;//状态栈
+    Stack<SemanticNode> semanticStack; //语义栈'
+    List<FourElement> fourElementList;
+    List<Integer> fourElementChain;
+    String op, arg1, arg2, res;
+    Integer fourElementCount=0;
+
+
 
     /**
      * 读取文件，根据文件内容生成vn、vt 要求：符合LR(0)文法规则
@@ -40,24 +63,15 @@ public class Parser {
         createGrammars(path, startSymbol);
         fillToEmpty();
         createFirstForVn();
-        List<String> ab = new ArrayList<String>();
-        ab.add("A");
-        ab.add("B");
-        Set<String> abSet = first(ab);
-        int a =1;
-//            init(path, startSymbol);
-//            extend();
-//            createItemLists();
-//            createActionAndGoto();
+        createItemSetList();
+        createActionAndGoto();
+        int i = 1;
     }
 
-//    public Parser(String path) {
-//        this(path, DEFALT_START_SYMBOL);
-//    }
-    
+
     /**
      * 读入文法
-     * 
+     *
      * @param path
      * @param startSymbol
      */
@@ -281,13 +295,13 @@ public class Parser {
     private Set<String> firstForOneV(String parseV){
         Set<String> firstSet = new HashSet<String>();
         // 1.要分析的符号为终结符
-        if(vtSet.contains(parseV)){
+        if(vtSet.contains(parseV) || parseV.equals(OVER)){
             firstSet.add(parseV);
 
             // 2.要分析的符号为非终结符
         }else if(vnSet.contains(parseV)){
             int oldSize = -1;
-            while(oldSize!=firstSet.size()){
+            //while(oldSize!=firstSet.size()){
                 oldSize = firstSet.size();
 
                 //找到以该符号为左部的文法
@@ -297,6 +311,9 @@ public class Parser {
                     }
                     int pos=1;
                     String parseVInRight = grammar.get(pos);
+                    if(parseV.equals(parseVInRight)){
+                        continue;
+                    }
                     // 2. && 3. 右部第一个为终结符或空
                     if(EMPTY.equals(parseVInRight) || vtSet.contains(parseVInRight)){
                         firstSet.add(parseVInRight);
@@ -313,7 +330,7 @@ public class Parser {
                         firstSet.addAll(firstForOneV(parseVInRight));
                     }
                 }
-            }
+            //}
         }
         return firstSet;
     }
@@ -362,10 +379,50 @@ public class Parser {
     private Set<Item> closure(Item firstItem){
         Set<Item> itemSet = new HashSet<Item>();
         itemSet.add(firstItem);
+        if(firstItem.getGrammarId() == 5){
+            int i = 1;
+        }
+        List<String> grammar = grammars.get(firstItem.getGrammarId());
+        //点位于最后时，直接返回
+        if(firstItem.getpointPos()>=grammar.size()){
+            return itemSet;
+
+        }
+
+        //取得点后的第一个符号
+        String vAfterPoint = grammar.get(firstItem.getpointPos());
+        Set<String> newForwards = new HashSet<String>();
+
+        // 只有在点后第一个符号为非终结符时，才继续求闭包
+        //if(vAfterPoint))
+        if(vnSet.contains(vAfterPoint)){
+            // 取文法中该符号后面的所有符号， 与forward拼接后， 对其求first集 。取并集作为新的forward集
+            List<String> remainedVs = grammar.subList(firstItem.getpointPos()+1, grammar.size());
+            for(String oldForward : firstItem.getForwards()){
+                List<String> jointVs = new ArrayList<String>(remainedVs);
+                jointVs.add(oldForward);
+                newForwards.addAll(first(jointVs));
+            }
+//            if(forwards.size()<=1 && forwards.toArray()[0].equals(EMPTY)){
+//                forwards.clear();
+//                forwards.add(OVER);
+//            }
+            // 找到所有以该非终结符为左部的语法，并与newForwards一起组成新的项目，加入项目集
+            for(int i=0; i<grammars.size(); i++){
+                List<String> nextGrammar = grammars.get(i);
+                if(vAfterPoint.equals(nextGrammar.get(0))){
+                    Item newItem = new Item(i, 1, newForwards);
+                    //itemSet.add(newItem);
+                    //if(vnSet.contains(nextGrammar.get(1))){
+                        itemSet.addAll(closure(newItem));
+                   // }
+                }
+            }
+
+        }
 
 
 
-        //for
 
         return itemSet;
     }
@@ -373,255 +430,321 @@ public class Parser {
     /**
      * 创建项目集列表
      */
-    private void createItemSets(){
-        Item initItem = new Item(0, 0, "#");
+    private void createItemSetList(){
+        Set<String> firstForwards = new HashSet<String>();
+        firstForwards.add(OVER);
+        Item initItem = new Item(0, 1, firstForwards);
         Set<Item> firstItemSet = closure(initItem);
-        itemSets = new ArrayList<Set<Item>>();
-        itemSets.add(firstItemSet);
+        itemSetList = new ArrayList<Set<Item>>();
+        itemSetList.add(firstItemSet);
+
+        goTable = new ArrayList<Map<String, Integer>>();
+//        Map<String, Integer> firstGo = new HashMap<String, Integer>();
+//        goTable.add(firstGo);
+
+        for (int numOfParsedItemSet = 0; numOfParsedItemSet < itemSetList.size(); numOfParsedItemSet++) {
+            Set<Item> itemSet = itemSetList.get(numOfParsedItemSet);
+            Map<String, Integer> go = new HashMap<String, Integer>();
+            int itemSetListCountAtBegin = itemSetList.size();
+
+            if(numOfParsedItemSet == 3){
+                int i123 = 1;
+            }
+            //创建项目集
+            for (Item item : itemSet) {
+                List<String> grammar = grammars.get(item.getGrammarId());
+                //等于时，点刚好位于语法最后一个符号的后面。跳过这些语法
+                if (item.getpointPos()>=grammar.size()) {
+                    continue;
+                }
+                //获取点后面的符号,若为空跳过
+                String parseWord = grammar.get(item.getpointPos());
+                if(parseWord.equals(EMPTY)){
+                    continue;
+                }
+                //点后移得新项目
+                Item newItem = new Item(item.getGrammarId(), item.getpointPos()+1, item.getForwards());
+
+                /* 若go表不存在该符号，则加入（符号，后继项目集编号） ，并将该项目的闭包加入itemSetList
+                 * 若存在，找到该符号指向的项目集，并将该项目的闭包加入
+                 */
+                if (!go.containsKey(parseWord)) {
+                    go.put(parseWord, itemSetList.size());
+                    itemSetList.add(closure(newItem));
+                } else {
+                    int nextItemListNum = go.get(parseWord);
+                    itemSetList.get(nextItemListNum).addAll(closure(newItem));
+                }
+
+            }
+
+            //将新建的项目集与之前的项目集比较，判断是否相同
+            //遍历新增的项目集
+            for (int numOfNewItemSet = itemSetListCountAtBegin; numOfNewItemSet < itemSetList.size(); numOfNewItemSet++) {
+                Set<Item> newItemSet = itemSetList.get(numOfNewItemSet);
+                for (int numOfOldItemSet = 0; numOfOldItemSet < itemSetListCountAtBegin; numOfOldItemSet++) {
+                    Set<Item> oldItemSet = itemSetList.get(numOfOldItemSet);
+                    //存在新项目集与旧项目集相同时，重定向go表中指向新项目集的符号，使其指向旧项目集。删掉新项目集,
+                    if (newItemSet.equals(oldItemSet)) {
+                       // if(numOfNewItemSet == 8){
+                            int i = 1;
+                       // }
+                        for (String key : go.keySet()) {
+                            Integer numOfNewItemSetFromGo = go.get(key);
+                            if (numOfNewItemSetFromGo.equals(numOfNewItemSet)) {
+                                go.put(key, numOfOldItemSet);
+                            } else if (numOfNewItemSetFromGo > numOfNewItemSet) {
+                                go.put(key, numOfNewItemSetFromGo - 1);
+                            }
+                        }
+                        itemSetList.remove(numOfNewItemSet);
+                        numOfNewItemSet--;
+                    }
+                }
+            }
+
+            goTable.add(go);
+        } // 遍历itemList结束
 
         //for(){}
 
     }
 
-    //    /**
-//     * 创建项目集
-//     */
-//    private void createItemLists() {
-//        itemLists = new ArrayList<List<int[]>>();
-//        goTable = new ArrayList<Map<String, Integer>>();
-//        itemLists.add(firstItemList());
-//        for (int i = 0; i < itemLists.size(); i++) {//
-//            List<int[]> itemList = itemLists.get(i);
-//            Map<String, Integer> go = new HashMap<String, Integer>();
-//            int ItemListCount = itemLists.size();
-//
-//            //创建项目集
-//            for (int[] item : itemList) {
-//                String[] grammar = grammars.get(item[0]);
-//                if (grammar[1].length() <= item[1]) {
-//                    continue;
+    /**
+     * 创建ACTION表和GOTO表
+     */
+    public void createActionAndGoto(){
+        actionTable = new ArrayList<Map<String, String>>();
+        gotoTable = new ArrayList<Map<String, Integer>>();
+        // 遍历goTable
+        for(int i=0; i<goTable.size(); i++){
+            Map<String, String> actionItem = new HashMap<String, String>();
+            Map<String, Integer> gotoItem = new HashMap<String, Integer>();
+
+            //填写 GOTO表和ACTION表中的移进
+            Map<String, Integer> go = goTable.get(i);
+            for(String parseWord : go.keySet()){
+                if(vtSet.contains(parseWord)){
+                    actionItem.put(parseWord, SHIFT+go.get(parseWord).toString());
+                }else{
+                    gotoItem.put(parseWord, go.get(parseWord));
+                }
+            }
+
+            //填写ACTION表中的规约
+            Set<Item> itemSet= itemSetList.get(i);
+            for(Item item : itemSet){
+                List<String> grammar = grammars.get(item.getGrammarId());
+                //点在最后或语法右部为空时规约
+                if(grammar.size() == item.getpointPos()
+                        || grammar.get(1).equals(EMPTY)){
+                    if(grammar.get(0).equals(EXTEND_START_SYMBOL)){
+                        actionItem.put(OVER, ACC);
+                        continue;
+                    }
+                    for(String forward:item.getForwards()){
+                        actionItem.put(forward, BECOME+item.getGrammarId().toString());
+                    }
+                }
+            }
+
+
+            //填入ACITON表和GOTO表的一行
+            actionTable.add(actionItem);
+            gotoTable.add(gotoItem);
+        }
+    }
+
+
+    /**
+     * 输入测试字符串(单个字符为元素)，输出分析表
+     */
+    public void control() {
+        Scanner input = new Scanner(System.in);
+        String inputString = "";//输入串
+        Stack<String> symbolStack = new Stack<String>();//符号栈
+        Stack<Integer> stateStack = new Stack<Integer>();//状态栈
+
+        String action = "";
+        int gotoo = -1;
+
+        System.out.println("\n Please Enter:");
+        inputString = input.next();
+
+        System.out.printf("%3s\t%-45s %-45s %-30s ","步骤","状态栈","符号栈","输入串");
+
+        symbolStack.push(OVER);
+        stateStack.push(INITIAL_STATE);
+        System.out.println("ACTION\tGOTO");
+        for (int stepNum = 1; !action.equals(ACC); stepNum++) {
+            System.out.printf("(%d)\t%-20s %-20s %-14s ",stepNum,stateStack.toString(),symbolStack.toString(),inputString);
+            String symbol = inputString.substring(0, 1);
+            Integer state = stateStack.peek();
+            action = actionTable.get(state).get(symbol);
+            if (action == null) {
+                System.out.println("\n error!");
+                return;
+            }
+            System.out.print(action + "\t");
+
+            String act;
+            Integer num;
+
+            if (!ACC.equals(action)) { //如果action不为acc则要继续判断是否需要求goto
+                act = action.substring(0, 1);
+                num = Integer.valueOf(action.substring(1));
+                if (BECOME.equals(act)) { //action为归约， 需要求goto
+                    List<String> grammar = grammars.get(num);
+                    int popNum = grammar.size()-1;
+                    String pushSymbol = grammar.get(0);
+                    for (int i = 0; i < popNum; i++) {
+                        stateStack.pop();
+                        symbolStack.pop();
+                    }
+                    gotoo = gotoTable.get(stateStack.peek())
+                            .get(pushSymbol);
+                    stateStack.push(gotoo);
+                    symbolStack.push(pushSymbol);
+                    System.out.print(gotoo);
+                } else {
+                    gotoo = -1;
+                    stateStack.push(num);
+                    String newSymbol = "";
+                    if(inputString.length()>1) {
+                        newSymbol = inputString.substring(0, 1);
+                        inputString = inputString.substring(1);
+                    } else {
+                        System.out.println("\n error!");
+                        return;
+                    }
+                    symbolStack.push(newSymbol);
+                }
+
+                System.out.println();
+            } else {
+                break;
+            }
+
+        }
+        System.out.println("\n success!");
+    }
+
+
+
+    //分析单词流
+    public void parseWordStream(List<Word> wordStream) {
+        symbolStack = new Stack<String>();//符号栈
+        stateStack = new Stack<Integer>();//状态栈
+        //semanticStack = new Stack<SemanticNode>();//语义栈
+        //fourElementList = new ArrayList<FourElement>();//四元式列表
+
+       // Stack<>
+        String action = "";
+        int gotoo = -1;
+
+        symbolStack.push(OVER);
+        stateStack.push(INITIAL_STATE);
+        for (int stepNum = 1; !action.equals(ACC); stepNum++) {
+            Word parsedWord = wordStream.get(0);
+            Integer state = stateStack.peek();
+            action = actionTable.get(state).get(String.valueOf(parsedWord.getType()));
+            if (action == null) {
+                System.out.println("\n error!");
+                return;
+            }
+
+            String act;
+            Integer num;
+
+            if (!ACC.equals(action)) { //如果action不为acc则要继续判断是否需要求goto
+                act = action.substring(0, 1);
+                num = Integer.valueOf(action.substring(1));
+                if (BECOME.equals(act)) { //action为归约
+                    //subroutine(num);
+                    List<String> grammar = grammars.get(num);
+                    /***
+                     *
+                     */
+                    String pushSymbol = grammar.get(0);
+                    int popNum = 0;
+                    if(!grammar.get(1).equals(EMPTY)){
+                        popNum = grammar.size() - 1;
+                        for (int i = 0; i < popNum; i++) {
+                            stateStack.pop();
+                            symbolStack.pop();
+                        }
+                    }
+                    gotoo = gotoTable.get(stateStack.peek())
+                            .get(pushSymbol);
+                    stateStack.push(gotoo);
+                    symbolStack.push(pushSymbol);
+                } else {
+                    gotoo = -1;
+                    stateStack.push(num);
+                    String newSymbol = "";
+                    if(wordStream.size()>1) {
+                        newSymbol = String.valueOf(wordStream.get(0).getType());
+                        wordStream.remove(0);
+                    } else {
+                        System.out.println("\n error!");
+                        return;
+                    }
+                    symbolStack.push(newSymbol);
+                }
+            } else {
+                break;
+            }
+
+        }
+
+
+
+        System.out.println("\n success!");
+    }
+
+
+    private String newTemp(){
+        return "T"+(tempCount++).toString();
+    }
+
+    private void generate(String op, String arg1, String arg2, String result){
+        FourElement fourElement = new FourElement(fourElementCount++, op, arg1, arg2, result);
+        fourElementList.add(fourElement);
+    }
+
+    /**
+     * 回填目标四元式的result(跳转地址)
+     * @param target
+     * @param result
+     */
+    private void backpatch(int target, int result){
+        fourElementList.get(target).setResult(String.valueOf(result));
+    }
+
+
+//    private void subroutine(Integer id){
+//        switch (id) {
+//            case 1:
+//                if(op!=null) {
+//                    arg1 = semanticStack.pop();
+//                    arg2 = semanticStack.pop();
+//                    res = newTemp();
+//                    generate(op, arg1, arg2, res);
+//                    symbolTable.put(res)
 //                }
-//                String symbol = grammar[1].substring(item[1], item[1]+1);
-//                int[] newItem = { item[0], item[1]+1};
-//                passedGrammar = new boolean[grammars.size()];
-//                if (!go.containsKey(symbol)) {
-//                    go.put(symbol, itemLists.size());
-//                    itemLists.add(closure(newItem));
-//                } else {
-//                    int nextItemListNum = go.get(symbol);
-//                    itemLists.get(nextItemListNum).addAll(closure(newItem));
-//                }
-//
-//            }
-//
-//            //将新建的项目集与之前的项目集比较，判断是否相同
-//            for (int after = ItemListCount; after < itemLists.size(); after++) {
-//                List<int[]> newItemList = itemLists.get(after);
-//                for (int before = 0; before < ItemListCount; before++) {
-//                    List<int[]> oldItemList = itemLists.get(before);
-//                    if (compareItemList(newItemList, oldItemList)) {
-//                        for (String key : go.keySet()) {
-//                            Integer now = go.get(key);
-//                            if (now.equals(after)) {
-//                                go.put(key, before);
-//                            } else if (now > after) {
-//                                go.put(key, now - 1);
-//                            }
-//                        }
-//                        itemLists.remove(itemLists.get(after));
-//                        after--;
-//                    }
-//                }
-//            }
-//
-//            goTable.add(go);
-//        } // 遍历itemList结束
-//
-//    }
-//
-//    /**
-//     * @return 第一个状态的项目集
-//     */
-//    private List<int[]> firstItemList() {
-//        passedGrammar = new boolean[grammars.size()];
-//        for (int i = 0; i < grammars.size(); i++) {
-//            String[] grammar = grammars.get(i);
-//            if (extendStartSymbol.equals(grammar[0])) {
-//                passedGrammar[i] = true;
-//                int[] firstItem = {i, 0};
-//                return closure(firstItem);
-//            }
-//        }
-//        return null;
-//    }
-//
-//    /**
-//     * @param item
-//     *            项目集中某一状态的一个项目
-//     *            item[0]为文法序号，item[1]为加点的位置
-//     * @return 该项的闭包
-//     */
-//    public List<int[]> closure(int[] item) {
-//        List<int[]> itemList = new ArrayList<int[]>(); // 状态的项目集
-//        itemList.add(item);
-//        int grammarNum = item[0];
-//        int pos = item[1];
-//
-//        String[] itemGrammar = grammars.get(grammarNum);
-//
-//        if (pos>=itemGrammar[1].length()) {
-//            return itemList;
-//        }
-//
-//        String symbol = itemGrammar[1].substring(pos, pos+1);
-//
-//        if (vt.contains(symbol)) { //symbol为终结符
-//            return itemList;
-//        } else {
-//            for (int i = 0; i < grammars.size(); i++) {
-//                String[] grammar = grammars.get(i);
-//
-//                if (symbol.equals(grammar[0])) {
-//                    if (passedGrammar[i] == true) {
-//                        continue;
-//                    }
-//                    passedGrammar[i] = true;
-//                    int[] newItem = {i, 0}; //E ->   E+T
-//                    if (EMPTY.equals(grammar[1])) {
-//                        newItem[1] = 1;
-//                        itemList.add(newItem);// 将S->ε填入set
-//                        int[] addPosItem = {item[0], item[1]+1};
-//                        itemList.addAll(closure(addPosItem));
-//                    } else {
-//                        itemList.addAll(closure(new int[] {newItem[0], newItem[1]}));
-//                    }
-//                }
-//            }
-//            return itemList;
-//        }
-//    }
-//
-//
-//    private void createActionAndGoto() {
-//        int count = 0;
-//        actionTable = new ArrayList<Map<String, String>>(); // action表
-//        gotoTable = new ArrayList<Map<String, Integer>>(); // goto表
-//        for (int i = 0; i < goTable.size(); i++) {
-//            Map<String, Integer> go = goTable.get(i);
-//            Map<String, Integer> gotoo = new HashMap<String, Integer>();
-//            Map<String, String> action = new HashMap<String, String>();
-//            if (go.isEmpty()) {
-//                int[] newItem = new int[2];
-//                int[] item = itemLists.get(i).get(0);
-//                String[] grammar = grammars.get(item[0]);
-//
-//                for (String terminal : vt) {
-//                    action.put(terminal, "r" + item[0]);
-//                }
-//                action.put(OVER,  "r" + item[0]);
-//
-//            } else {
-//                for (String key : go.keySet()) {
-//                    if (vt.contains(key)) {
-//                        action.put(key, "S" + go.get(key));
-//                    } else {
-//                        gotoo.put(key, go.get(key));
-//                    }
-//                }
-//            }
-//
-//            gotoTable.add(gotoo);
-//            actionTable.add(action);
-//        }
-//
-//
-//        if(startSymbol.equals(extendStartSymbol)){
-//            Map<String, Integer> gotoo = new HashMap<String, Integer>();
-//            Map<String, String> action = new HashMap<String, String>();
-//            action.put(OVER, "acc");
-//            int accState = actionTable.size();
-//            actionTable.add(action);
-//            gotoTable.add(gotoo);
-//            gotoTable.get(INITIAL_STATE).put(extendStartSymbol, accState);
-//        } else {
-//            int accState = gotoTable.get(INITIAL_STATE).get(startSymbol);
-//            actionTable.get(accState).clear();
-//            gotoTable.get(accState).clear();
-//            actionTable.get(accState).put(OVER, "acc");
-//            gotoTable.get(INITIAL_STATE).put(startSymbol, accState);
-//        }
-//    }
-//
-//    public void control() {
-//        Scanner input = new Scanner(System.in);
-//        String inputString = "";//输入串
-//        Stack<String> symbolStack = new Stack<String>();//符号栈
-//        Stack<Integer> stateStack = new Stack<Integer>();//状态栈
-//        String action = "";
-//        int gotoo = -1;
-//
-//        System.out.println("\n Please Enter:");
-//        inputString = input.next();
-//
-//        System.out.printf("%3s\t%-45s %-45s %-30s ","步骤","状态栈","符号栈","输入串");
-//
-//        symbolStack.push(OVER);
-//        stateStack.push(INITIAL_STATE);
-//        System.out.println("ACTION\tGOTO");
-//        for (int stepNum = 1; !action.equals("acc"); stepNum++) {
-//            System.out.printf("(%d)\t%-20s %-20s %-14s ",stepNum,stateStack.toString(),symbolStack.toString(),inputString);
-//            String symbol = inputString.substring(0, 1);
-//            Integer state = stateStack.peek();
-//            action = actionTable.get(state).get(symbol);
-//            if (action == null) {
-//                System.out.println("\n error!");
-//                return;
-//            }
-//            System.out.print(action + "\t");
-//
-//            String act;
-//            Integer num;
-//
-//            if (!"acc".equals(action)) { //如果action不为acc则要继续判断是否需要求goto
-//                act = action.substring(0, 1);
-//                num = Integer.valueOf(action.substring(1, 2));
-//                if ("r".equals(act)) { //action为归约， 需要求goto
-//                    String[] grammar = grammars.get(num);
-//                    int popNum = grammar[1].length();
-//                    String pushSymbol = grammar[0];
-//                    for (int i = 0; i < popNum; i++) {
-//                        stateStack.pop();
-//                        symbolStack.pop();
-//                    }
-//                    gotoo = gotoTable.get(stateStack.peek())
-//                            .get(pushSymbol);
-//                    stateStack.push(gotoo);
-//                    symbolStack.push(pushSymbol);
-//                    System.out.print(gotoo);
-//                } else {
-//                    gotoo = -1;
-//                    stateStack.push(num);
-//                    String newSymbol = "";
-//                    if(inputString.length()>1) {
-//                        newSymbol = inputString.substring(0, 1);
-//                        inputString = inputString.substring(1);
-//                    } else {
-//                        System.out.println("\n error!");
-//                        return;
-//                    }
-//                    symbolStack.push(newSymbol);
-//                }
-//
-//                System.out.println();
-//            } else {
 //                break;
-//            }
 //
+//                default:
+//                    System.out.println("error");
 //        }
-//        System.out.println("\n success!");
 //    }
-//
-    
+
+
+    public void setSymbolTable(Map<String, Info> symbolTable) {
+        this.symbolTable = symbolTable;
+    }
+
+
     /**
      * 打印文法
      */
@@ -683,122 +806,72 @@ public class Parser {
 //        System.out.println();
 //    }
 //
-//    /**
-//     * 打印Action表
-//     */
-//    public void printActionAndGotoTable() {
-//        System.out.println("      action and goto");
-//        System.out.print("      ");
-//        for (String s : vt) {
-//            System.out.print(s+"   ");
-//        }
-//        System.out.print(OVER+"   ");
-//        for (String s : vn) {
-//            System.out.print(s+"   ");
-//        }
-//        System.out.println();
-//        int count = 0;
-//        for (int i=0; i<actionTable.size(); i++) {
-//            Map<String, String> actionItem = actionTable.get(i);
-//            Map<String, Integer> gotoItem = gotoTable.get(i);
-//            String itemSetsNum = "I" + count;
-//            System.out.printf("%-4s",itemSetsNum);
-//            //if(actionItem.size()>0)
-//            System.out.print("  ");
-//            for (String s : vt) {
-//                if(actionItem.get(s)!=null){
-//                    System.out.print(actionItem.get(s)+"  ");
-//                } else {
-//                    System.out.print("    ");
-//                }
-//            }
-//            if(actionItem.get(OVER)!=null){
-//                System.out.print(actionItem.get(OVER));
-//            }else{
-//                System.out.print("   ");
-//            }
-//            System.out.print(" ");
-//            for (String s : vn) {
-//                if(gotoItem.get(s)!=null){
-//                    System.out.print(gotoItem.get(s)+"  ");
-//                } else {
-//                    System.out.print("    ");
-//                }
-//            }
-//            System.out.println();
-//            count++;
-//        }
-//    }
-//
-//    /**
-//     * 打印go表
-//     */
-//    public void printGoTable() {
-//        System.out.println("go表：");
-//        System.out.println();
-//        int count = 0;
-//        for (Map<String, Integer> goItem : goTable) {
-//            System.out.print("I" + count + " ");
-//            System.out.println(goItem.toString());
-//            count++;
-//        }
-//
-//    }
-//
-//    /**
-//     * 比较list<int[]>类型的对象的内容是否相同
-//     *
-//     * @param a
-//     * @param b
-//     * @return 相同返回true，不同返回false, a或b为null返回false
-//     */
-//    public boolean compareItemList(List<int[]> a, List<int[]> b) {
-//        if (a == null || b == null) {
-//            return false;
-//        }
-//        if (a.size() != b.size()) {
-//            return false;
-//        }
-//        Iterator<int[]> ia = a.iterator();
-//        while (ia.hasNext()) {
-//            int[] sa = ia.next();
-//            Iterator<int[]> ib = b.iterator();
-//            boolean find = false;
-//            while (ib.hasNext()) {
-//                int[] sb = ib.next();
-//                if (compareIntegerArray(sa, sb)) {
-//                    find = true;
-//                    break;
-//                }
-//            }
-//            if (!find) {
-//                return false;
-//            }
-//
-//        }
-//        return true;
-//    }
-//
-//    /**
-//     * 比较Integer[]类型的对象的内容是否相同
-//     *
-//     * @param a
-//     * @param b
-//     * @return 相同返回true，不同返回false, a或b为null返回false
-//     */
-//    public boolean compareIntegerArray(int[] a, int[] b) {
-//        if (a == null || b == null) {
-//            return false;
-//        }
-//        if (a.length != b.length) {
-//            return false;
-//        }
-//        for (int i = 0; i < a.length; i++) {
-//            if (a[i]!=b[i]) {
-//                return false;
-//            }
-//        }
-//        return true;
-//    }
+    /**
+     * 打印Action表
+     */
+    public void printActionAndGotoTable() {
+        System.out.println("      action and goto");
+        System.out.print("      ");
+        for (String s : vtSet) {
+            System.out.print(s+"   ");
+        }
+        System.out.print(OVER+"   ");
+        for (String s : vnSet) {
+            if(s.equals(EXTEND_START_SYMBOL)){
+                System.out.print("    ");
+                continue;
+            }
+            System.out.print(s+"   ");
+        }
+        System.out.println();
+        int count = 0;
+        for (int i=0; i<actionTable.size(); i++) {
+            Map<String, String> actionItem = actionTable.get(i);
+            Map<String, Integer> gotoItem = gotoTable.get(i);
+            String ItemSetListNum = "I" + count;
+            System.out.printf("%-4s",ItemSetListNum);
+            //if(actionItem.size()>0)
+            System.out.print("  ");
+            for (String s : vtSet) {
+                if(actionItem.get(s)!=null){
+                    System.out.print(actionItem.get(s)+"  ");
+                } else {
+                    System.out.print("    ");
+                }
+            }
+            if(actionItem.get(OVER)!=null){
+                System.out.print(actionItem.get(OVER));
+            }else{
+                System.out.print("   ");
+            }
+            System.out.print(" ");
+            for (String s : vnSet) {
+                if(gotoItem.get(s)!=null){
+                    System.out.print(gotoItem.get(s)+"  ");
+                } else {
+                    System.out.print("    ");
+                }
+            }
+            System.out.println();
+            count++;
+        }
+    }
+
+    /**
+     * 打印go表
+     */
+    public void printGoTable() {
+        System.out.println("go表：");
+        System.out.println();
+        int count = 0;
+        for (Map<String, Integer> goItem : goTable) {
+            System.out.print("I" + count + " ");
+            System.out.println(goItem.toString());
+            count++;
+        }
+
+    }
+
+
 
 }

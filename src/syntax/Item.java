@@ -1,15 +1,16 @@
 package syntax;
+import java.util.Set;
 
 public class Item {
 
     private Integer grammarId;
     private Integer pointPos;
-    private String forward;
+    private Set<String> forwards;
 
-    public Item(Integer grammarId, Integer pointPos, String forward) {
+    public Item(Integer grammarId, Integer pointPos, Set<String> forwards) {
         this.grammarId = grammarId;
         this.pointPos = pointPos;
-        this.forward = forward;
+        this.forwards = forwards;
     }
 
     @Override
@@ -18,7 +19,8 @@ public class Item {
             Item item = (Item) o;
             if (this.grammarId.equals(item.grammarId)
                     && this.pointPos.equals(item.pointPos)
-                    && this.forward.equals(item.forward)) {
+                    && this.forwards.size()==item.forwards.size()
+                    && this.forwards.containsAll(item.forwards)){ //此行和上面一行可用equals代替
                 return true;
             }
         }
@@ -47,12 +49,12 @@ public class Item {
         this.pointPos = pointPos;
     }
 
-    public String getForward() {
-        return forward;
+    public Set<String> getForwards() {
+        return forwards;
     }
 
-    public void setForward(String forward) {
-        this.forward = forward;
+    public void setForwards(Set<String> forward) {
+        this.forwards = forwards;
     }
 
 }

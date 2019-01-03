@@ -8,66 +8,6 @@ import java.util.List;
 import java.util.Map;
 
 
-enum Operator{
-    /**
-     * 操作符 编号空间0~19
-     */
-    Plus(0, "*"), Minus(1, "-"), Mul(2, "*"), Div(3, "/"), Equal(4, "="), DEqual(5, "=="),
-    Less(6, "<"), More(7, ">"), LE(8, "<="), ME(9, ">=");
-    private int id;
-    private String name;
-    Operator(int id, String name){
-        this.id = id;
-        this.name = name;
-    }
-    public Integer getId(){
-        return id;
-    }
-    public String getName(){
-        return name;
-    }
-}
-
-
-enum Delimiter{
-    /**
-     * 界符 编号空间20~39
-     */
-    Comma(0, ","), Colon(1, ":"), Semicolon(2, ";"), LParen(3, "("), RParen(4, ")"),
-    LBrace(5, "{"), RBrace(6, "}");
-    private int id;
-    private String name;
-    Delimiter(int id, String name){
-        this.id = id+20;
-        this.name = name;
-    }
-    public Integer getId(){
-        return id;
-    }
-    public String getName(){
-        return name;
-    }
-}
-
-enum Reserve{
-    /**
-     * 保留字 40~79
-     */
-    Auto(0), Break(1), Case(2), Char(3), Const(4), Continue(5),
-    Default(6), Do(7), Double(8), Eles(9), Enum(10), Extern(11),
-    Float(12), For(13), Goto(14), If(15), Int(16), Long(17), Register(18),
-    Return(19), Short(20), Signed(21), Sizeof(22), Static(23), Struct(24),
-    Switch(25), Typedef(26), Union(27), Usigned(28), Void(29), Volatile(30), While(31);
-    private int id;
-    Reserve(int id){
-        this.id = id+40;
-    }
-    public Integer getId() {
-        return id;
-    }
-}
-
-
 public class Lexer {
 
     /**
@@ -78,17 +18,17 @@ public class Lexer {
     /**
      * 标识符id
      */
-    public static final int IDENTIFIER_ID = 80;
+    public static final int IDENTIFIER_ID = 90;
 
     /**
      * 常数中的数字的id
      */
-    public static final int NUMBER_ID = 81;
+    public static final int NUMBER_ID = 91;
 
     /**
      * 常数中的字符串的id
      */
-    public static final int LETTER_ID = 82 ;
+    public static final int LETTER_ID = 92 ;
     
 
     private String sourceFilePath;
@@ -100,10 +40,14 @@ public class Lexer {
 
     private List<Word> wordStream = new ArrayList();
 
+
+    private Map<String, Info> symbolTable = new HashMap<String, Info>();
+
     public Lexer(String sourceFilePath){
         this.sourceFilePath = sourceFilePath;
         getBuffer();
         analyse();
+        int i = 0;
     }
 
 
@@ -149,21 +93,29 @@ public class Lexer {
             /**
              * 关键字或标识符
              */
-            while(c!=null&&(Character.isLetter(c) || Character.isDigit(c))) {
+            while(c!=null&&   (Character.isLetter(c) || Character.isDigit(c))   ) {
                 token = token.concat(String.valueOf(c));
                 c = getCh();
             }
             pos--;
             Integer type = null;
+
             for(Reserve r : Reserve.values()){
-                if(r.toString().toLowerCase().equals(String.valueOf(c))){
+                if(r.toString().toLowerCase().equals(String.valueOf(token))){
                     type = r.getId();
+                    break;
                 }
             }
+
             if(type!=null) {
-                wordStream.add(new Word(type, token));
+                wordStream.add(new Word(type));
             } else {
                 wordStream.add(new Word(IDENTIFIER_ID, token));
+                //目前只有整形
+                symbolTable.put(token, new Info(Reserve.Int.getId(), 0));
+            }
+            if(c==null){
+                return false;
             }
         } else if(Character.isDigit(c)) {
             /**
@@ -173,8 +125,11 @@ public class Lexer {
                 token = token.concat(String.valueOf(c));
                 c = getCh();
             }
-            pos--;
             wordStream.add(new Word(NUMBER_ID, token));
+            if(c==null){
+                return false;
+            }
+            pos--;
         } else{
             /**
              * 运算符或界符
@@ -185,7 +140,7 @@ public class Lexer {
              */
             for(Delimiter d : Delimiter.values()){
                 if(d.getName().equals(String.valueOf(c))){
-                    word = new Word(d.getId(), d.getName());
+                    word = new Word(d.getId());
                     wordStream.add(word);
                     break;
                 }
@@ -194,42 +149,85 @@ public class Lexer {
             if(word == null) {
                 switch (c) {
                     case '+':
-                        wordStream.add(new Word(Operator.Plus.getId(), Operator.Plus.getName()));
+                        c = getCh();
+                        if (c == Operator.Plus.getName().charAt(0)) {
+                            wordStream.add(new Word(Operator.SelfAdd.getId()));
+                        } else {
+                            pos--;
+                            wordStream.add(new Word(Operator.Plus.getId()));
+                        }
                         break;
                     case '-':
-                        wordStream.add(new Word(Operator.Minus.getId(), Operator.Minus.getName()));
+                        c = getCh();
+                        if (c == Operator.Minus.getName().charAt(0)) {
+                            wordStream.add(new Word(Operator.SelfSub.getId()));
+                        } else {
+                            pos--;
+                            wordStream.add(new Word(Operator.Minus.getId()));
+                        }
                         break;
                     case '*':
-                        wordStream.add(new Word(Operator.Mul.getId(), Operator.Mul.getName()));
+                        wordStream.add(new Word(Operator.Mul.getId()));
                         break;
                     case '/':
-                        wordStream.add(new Word(Operator.Div.getId(), Operator.Div.getName()));
+                        wordStream.add(new Word(Operator.Div.getId()));
                         break;
                     case '<':
                         c = getCh();
                         if (c == Operator.Equal.getName().charAt(0)) {
-                            wordStream.add(new Word(Operator.LE.getId(), Operator.LE.getName()));
+                            wordStream.add(new Word(Operator.LE.getId()));
                         } else {
                             pos--;
-                            wordStream.add(new Word(Operator.Less.getId(), Operator.Less.getName()));
+                            wordStream.add(new Word(Operator.Less.getId()));
                         }
                         break;
                     case '>':
                         c = getCh();
                         if (c == Operator.Equal.getName().charAt(0)) {
-                            wordStream.add(new Word(Operator.ME.getId(), Operator.ME.getName()));
+                            wordStream.add(new Word(Operator.ME.getId()));
                         } else {
                             pos--;
-                            wordStream.add(new Word(Operator.More.getId(), Operator.More.getName()));
+                            wordStream.add(new Word(Operator.More.getId()));
+                        }
+                        break;
+                    case '!':
+                        c = getCh();
+                        if (c == Operator.Equal.getName().charAt(0)) {
+                            wordStream.add(new Word(Operator.NE.getId()));
+                        } else {
+                            pos--;
+                            wordStream.add(new Word(Operator.Not.getId()));
                         }
                         break;
                     case '=':
                         c = getCh();
                         if (c == Operator.Equal.getName().charAt(0)) {
-                            wordStream.add(new Word(Operator.DEqual.getId(), Operator.DEqual.getName()));
+                            wordStream.add(new Word(Operator.DEqual.getId()));
                         } else {
                             pos--;
-                            wordStream.add(new Word(Operator.Equal.getId(), Operator.Equal.getName()));
+                            wordStream.add(new Word(Operator.Equal.getId()));
+                        }
+                        break;
+                    case '&':
+                        token = c.toString();
+                        c = getCh();
+                        token += c;
+                        if (token.equals(Operator.And.getName())) {
+                            wordStream.add(new Word(Operator.And.getId()));
+                        } else {
+                            System.out.println("error");
+                            pos--;
+                        }
+                        break;
+                    case '|':
+                        token = c.toString();
+                        c = getCh();
+                        token += c;
+                        if (token.equals(Operator.Or.getName())) {
+                            wordStream.add(new Word(Operator.Or.getId()));
+                        } else {
+                            System.out.println("error");
+                            pos--;
                         }
                         break;
                     default:
@@ -250,14 +248,21 @@ public class Lexer {
 
 
     public List getWordStream(){
+        Word over = new Word(Reserve.Over.getId());
+        wordStream.add(over);
         return wordStream;
     }
 
 
     public void printWordStream(){
         for(Word w : wordStream){
-            System.out.println("( "+w.type + ",  " + w.value+" )");
+            System.out.println("( "+w.getType() + ",  " + w.getValue()+" )");
         }
+    }
+
+
+    public Map<String, Info>getSymbolTable() {
+        return this.symbolTable;
     }
 
 }
