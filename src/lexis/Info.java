@@ -2,9 +2,11 @@ package lexis;
 
 public class Info {
     private Integer typeId;
-    private Integer value;
+    private String value;
 
-    public Info(Integer typeId, Integer value) {
+    public Info(){super();}
+    public Info(Integer typeId, String value) {
+        super();
         this.typeId = typeId;
         this.value = value;
     }
@@ -17,11 +19,11 @@ public class Info {
         this.typeId = typeId;
     }
 
-    public Integer getValue() {
+    public String getValue() {
         return value;
     }
 
-    public void setValue(Integer value) {
+    public void setValue(String value) {
         this.value = value;
     }
 }

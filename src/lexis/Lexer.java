@@ -15,20 +15,6 @@ public class Lexer {
      */
     public static final int MAX_BUFFER_SIZE = 1024;
 
-    /**
-     * 标识符id
-     */
-    public static final int IDENTIFIER_ID = 90;
-
-    /**
-     * 常数中的数字的id
-     */
-    public static final int NUMBER_ID = 91;
-
-    /**
-     * 常数中的字符串的id
-     */
-    public static final int LETTER_ID = 92 ;
     
 
     private String sourceFilePath;
@@ -41,7 +27,7 @@ public class Lexer {
     private List<Word> wordStream = new ArrayList();
 
 
-    private Map<String, Info> symbolTable = new HashMap<String, Info>();
+
 
     public Lexer(String sourceFilePath){
         this.sourceFilePath = sourceFilePath;
@@ -110,9 +96,7 @@ public class Lexer {
             if(type!=null) {
                 wordStream.add(new Word(type));
             } else {
-                wordStream.add(new Word(IDENTIFIER_ID, token));
-                //目前只有整形
-                symbolTable.put(token, new Info(Reserve.Int.getId(), 0));
+                wordStream.add(new Word(Identifier.Id.getId(), token));
             }
             if(c==null){
                 return false;
@@ -125,7 +109,7 @@ public class Lexer {
                 token = token.concat(String.valueOf(c));
                 c = getCh();
             }
-            wordStream.add(new Word(NUMBER_ID, token));
+            wordStream.add(new Word(Constant.Num.getId(), token));
             if(c==null){
                 return false;
             }
@@ -260,9 +244,5 @@ public class Lexer {
         }
     }
 
-
-    public Map<String, Info>getSymbolTable() {
-        return this.symbolTable;
-    }
 
 }

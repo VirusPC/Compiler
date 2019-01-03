@@ -1,10 +1,9 @@
 package syntax;
 
+import com.sun.org.apache.xerces.internal.util.SymbolTable;
 import intermediate.FourElement;
-import lexis.Info;
-import lexis.Reserve;
-import lexis.SemanticNode;
-import lexis.Word;
+import lexis.*;
+import sun.awt.Symbol;
 
 import javax.swing.*;
 import java.io.BufferedReader;
@@ -29,8 +28,6 @@ public class Parser {
     public static int INITIAL_STATE = 0; //初始状态
 
 
-    private Map<String, Info> symbolTable = new HashMap<String, Info>();
-
     private List<List<String>> grammars; // 文法
     private String startSymbol;  // 开始符
     private Set<String> vnSet; // 非终结符集合
@@ -43,13 +40,13 @@ public class Parser {
     private List<Map<String, String>> actionTable; // action
     private List<Map<String, Integer>> gotoTable; // goto表
 
-    private Integer tempCount = 0;
+    private Integer tempCount = 1;
     Stack<String> symbolStack;//符号栈
     Stack<Integer> stateStack;//状态栈
-    Stack<SemanticNode> semanticStack; //语义栈'
+    Stack<SemanticNode> semanticStack; //语义栈
+    private Map<String, Info> symbolTable;
     List<FourElement> fourElementList;
     List<Integer> fourElementChain;
-    String op, arg1, arg2, res;
     Integer fourElementCount=0;
 
 
@@ -635,8 +632,9 @@ public class Parser {
     public void parseWordStream(List<Word> wordStream) {
         symbolStack = new Stack<String>();//符号栈
         stateStack = new Stack<Integer>();//状态栈
-        //semanticStack = new Stack<SemanticNode>();//语义栈
-        //fourElementList = new ArrayList<FourElement>();//四元式列表
+        semanticStack = new Stack<SemanticNode>();//语义栈
+        fourElementList = new ArrayList<FourElement>();//四元式列表
+        symbolTable = new HashMap<String, Info>(); //符号表
 
        // Stack<>
         String action = "";
@@ -646,6 +644,26 @@ public class Parser {
         stateStack.push(INITIAL_STATE);
         for (int stepNum = 1; !action.equals(ACC); stepNum++) {
             Word parsedWord = wordStream.get(0);
+            //为标识符或常量时, 为类型时，入语义栈
+            if(parsedWord.getValue()!=null) {
+                SemanticNode sn = new SemanticNode();
+                if(parsedWord.getType().equals(Constant.Num.getId())){
+                    sn.setType(Reserve.Int.getId());
+                }else if(parsedWord.getType().equals(Constant.Char.getId())){
+                    sn.setType(Reserve.Char.getId());
+                }
+                sn.setType(parsedWord.getType());
+                sn.setPalce(parsedWord.getValue());
+                semanticStack.push(sn);
+            }else if(parsedWord.getType() .equals( Reserve.Int.getId())
+            ||parsedWord.getType() .equals( Reserve.Char.getId())
+            ||parsedWord.getType() .equals(Reserve.Bool.getId())){
+                //类型入语义栈
+                SemanticNode sn = new SemanticNode();
+                sn.setType(parsedWord.getType());
+                semanticStack.push(sn);
+            }
+
             Integer state = stateStack.peek();
             action = actionTable.get(state).get(String.valueOf(parsedWord.getType()));
             if (action == null) {
@@ -660,7 +678,7 @@ public class Parser {
                 act = action.substring(0, 1);
                 num = Integer.valueOf(action.substring(1));
                 if (BECOME.equals(act)) { //action为归约
-                    //subroutine(num);
+                    subroutine(num);
                     List<String> grammar = grammars.get(num);
                     /***
                      *
@@ -722,22 +740,96 @@ public class Parser {
     }
 
 
-//    private void subroutine(Integer id){
-//        switch (id) {
-//            case 1:
-//                if(op!=null) {
-//                    arg1 = semanticStack.pop();
-//                    arg2 = semanticStack.pop();
-//                    res = newTemp();
-//                    generate(op, arg1, arg2, res);
-//                    symbolTable.put(res)
-//                }
-//                break;
-//
-//                default:
-//                    System.out.println("error");
-//        }
-//    }
+    private void subroutine(Integer id){
+        switch (id) {
+            //赋值
+            case 2:
+                SemanticNode  identifier= semanticStack.pop();
+                SemanticNode arithmetic = semanticStack.pop();
+                if(!arithmetic.getType().equals(Reserve.Int.getId())){
+                    System.out.println("need integer!");
+                }
+                generate("=", arithmetic.getPalce(), "_", identifier.getPalce());
+                break;
+            //加
+            case 3:
+                SemanticNode arg2_3 = semanticStack.pop();
+                SemanticNode arg1_3 = semanticStack.pop();
+
+                if(!arg1_3.getType().equals(arg2_3.getType()) || !arg1_3.getType().equals(Reserve.Int.getId())){
+                    System.out.println("need integer!");
+                }
+
+                SemanticNode arithmetic3 = new SemanticNode();
+                String temp3 = newTemp();
+                arithmetic3.setPalce(temp3);
+                arithmetic3.setType(Reserve.Int.getId());
+                //Integer value3 = Integer.valueOf(arg1_3.getPalce()) + Integer.valueOf(arg2_3.getPalce());
+                generate("+", arg1_3.getPalce(), arg2_3.getPalce(), temp3);
+                semanticStack.push(arithmetic3);
+                break;
+            //减
+            case 4:
+                SemanticNode arg2_4 = semanticStack.pop();
+                SemanticNode arg1_4 = semanticStack.pop();
+                if(!arg2_4.getType().equals(arg2_4.getType()) || !arg1_4.getType().equals(Reserve.Int.getId())){
+                    System.out.println("need integer!");
+                }
+                SemanticNode arithmetic4 = new SemanticNode();
+                String temp = newTemp();
+                arithmetic4.setPalce(temp);
+                arithmetic4.setType(Reserve.Int.getId());
+                generate("-", arg1_4.getPalce(), arg2_4.getPalce(), temp);
+                semanticStack.push(arithmetic4);
+                break;
+            //乘
+            case 6:
+                SemanticNode arg2_6 = semanticStack.pop();
+                SemanticNode arg1_6 = semanticStack.pop();
+
+                if(!arg2_6.getType().equals(arg2_6.getType()) || !arg1_6.getType().equals(Reserve.Int.getId())){
+                    System.out.println("need integer!");
+                }
+
+                SemanticNode arithmetic6 = new SemanticNode();
+                String temp6 = newTemp();
+                arithmetic6.setPalce(temp6);
+                arithmetic6.setType(Reserve.Int.getId());
+                generate("*", arg1_6.getPalce(), arg2_6.getPalce(), temp6);
+                semanticStack.push(arithmetic6);
+                break;
+                //除
+            case 7:
+                SemanticNode arg2_7 = semanticStack.pop();
+                SemanticNode arg1_7 = semanticStack.pop();
+                if(!arg2_7.getType().equals(arg2_7.getType()) || !arg1_7.getType().equals(Reserve.Int.getId())){
+                    System.out.println("need integer!");
+                }
+                SemanticNode arithmetic7 = new SemanticNode();
+                String temp7 = newTemp();
+                arithmetic7.setPalce(temp7);
+                arithmetic7.setType(Reserve.Int.getId());
+                generate("/", arg1_7.getPalce(), arg2_7.getPalce(), temp7);
+                semanticStack.push(arithmetic7);
+                break;
+            case 13://整型变量定义
+                SemanticNode sn13 = new SemanticNode();
+                SemanticNode  identifier13= semanticStack.pop();
+                SemanticNode arithmetic13 = semanticStack.pop();
+                SemanticNode type13 = semanticStack.pop();
+
+                if(!type13.getType().equals(arithmetic13.getType())){
+                    System.out.println("type error!");
+                }
+
+                Info info13 = new Info();
+                info13.setTypeId(type13.getType());
+                symbolTable.put(identifier13.getPalce(), info13);
+
+                generate("=", arithmetic13.getPalce(), "_", identifier13.getPalce());
+                default:
+        }
+    }
 
 
     public void setSymbolTable(Map<String, Info> symbolTable) {
