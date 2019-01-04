@@ -40,14 +40,16 @@ public class Parser {
     private List<Map<String, String>> actionTable; // action
     private List<Map<String, Integer>> gotoTable; // goto表
 
-    private Integer tempCount = 1;
-    Stack<String> symbolStack;//符号栈
-    Stack<Integer> stateStack;//状态栈
-    Stack<SemanticNode> semanticStack; //语义栈
+
+    private Word parsedWord;
+    private Stack<String> symbolStack;//符号栈
+    private Stack<Integer> stateStack;//状态栈
+    private Stack<SemanticNode> semanticStack; //语义栈
     private Map<String, Info> symbolTable;
-    List<FourElement> fourElementList;
-    List<Integer> fourElementChain;
-    Integer fourElementCount=0;
+    private List<FourElement> fourElementList;
+    private List<Integer> fourElementChain;
+    private Integer tempCount = 1;
+    private Integer fourElementCount=0;
 
 
 
@@ -643,26 +645,7 @@ public class Parser {
         symbolStack.push(OVER);
         stateStack.push(INITIAL_STATE);
         for (int stepNum = 1; !action.equals(ACC); stepNum++) {
-            Word parsedWord = wordStream.get(0);
-            //为标识符或常量时, 为类型时，入语义栈
-            if(parsedWord.getValue()!=null) {
-                SemanticNode sn = new SemanticNode();
-                if(parsedWord.getType().equals(Constant.Num.getId())){
-                    sn.setType(Reserve.Int.getId());
-                }else if(parsedWord.getType().equals(Constant.Char.getId())){
-                    sn.setType(Reserve.Char.getId());
-                }
-                sn.setType(parsedWord.getType());
-                sn.setPalce(parsedWord.getValue());
-                semanticStack.push(sn);
-            }else if(parsedWord.getType() .equals( Reserve.Int.getId())
-            ||parsedWord.getType() .equals( Reserve.Char.getId())
-            ||parsedWord.getType() .equals(Reserve.Bool.getId())){
-                //类型入语义栈
-                SemanticNode sn = new SemanticNode();
-                sn.setType(parsedWord.getType());
-                semanticStack.push(sn);
-            }
+            parsedWord = wordStream.get(0);
 
             Integer state = stateStack.peek();
             action = actionTable.get(state).get(String.valueOf(parsedWord.getType()));
@@ -696,11 +679,34 @@ public class Parser {
                             .get(pushSymbol);
                     stateStack.push(gotoo);
                     symbolStack.push(pushSymbol);
+
                 } else {
                     gotoo = -1;
                     stateStack.push(num);
                     String newSymbol = "";
                     if(wordStream.size()>1) {
+
+                        //为标识符或常量时, 为类型时，入语义栈
+                        if(parsedWord.getValue()!=null) {
+                            SemanticNode sn = new SemanticNode();
+                            if(parsedWord.getType().equals(Constant.Num.getId())){
+                                sn.setType(Reserve.Int.getId());
+                            }else if(parsedWord.getType().equals(Constant.Char.getId())){
+                                sn.setType(Reserve.Char.getId());
+                            }else {
+                                sn.setType(parsedWord.getType());
+                            }
+                            sn.setPalce(parsedWord.getValue());
+                            semanticStack.push(sn);
+                        }else if(parsedWord.getType() .equals( Reserve.Int.getId())
+                                ||parsedWord.getType() .equals( Reserve.Char.getId())
+                                ||parsedWord.getType() .equals(Reserve.Bool.getId())){
+                            //类型入语义栈
+                            SemanticNode sn = new SemanticNode();
+                            sn.setType(parsedWord.getType());
+                            semanticStack.push(sn);
+                        }
+
                         newSymbol = String.valueOf(wordStream.get(0).getType());
                         wordStream.remove(0);
                     } else {
@@ -744,8 +750,8 @@ public class Parser {
         switch (id) {
             //赋值
             case 2:
-                SemanticNode  identifier= semanticStack.pop();
-                SemanticNode arithmetic = semanticStack.pop();
+                SemanticNode  arithmetic= semanticStack.pop();
+                SemanticNode identifier = semanticStack.pop();
                 if(!arithmetic.getType().equals(Reserve.Int.getId())){
                     System.out.println("need integer!");
                 }
@@ -814,8 +820,8 @@ public class Parser {
                 break;
             case 13://整型变量定义
                 SemanticNode sn13 = new SemanticNode();
-                SemanticNode  identifier13= semanticStack.pop();
-                SemanticNode arithmetic13 = semanticStack.pop();
+                SemanticNode  arithmetic13= semanticStack.pop();
+                SemanticNode identifier13 = semanticStack.pop();
                 SemanticNode type13 = semanticStack.pop();
 
                 if(!type13.getType().equals(arithmetic13.getType())){
