@@ -2,21 +2,27 @@ package lexis;
 
 public class Word {
     private Integer type;
-    private Integer varableType;
-    private String value; //仅当为标识符或常量时才存在value
+    private Integer lineNum;
+	private Integer wordNum;
+    private String value;
 
     public Word(){
 
     }
 
     public  Word(Integer type) {
-        this(type, null);
+        this(type, null, null, null);
     }
 
-    public Word(Integer type, String value){
+    public  Word(Integer type, Integer lineNum, Integer wordNum) {
+        this(type, null, lineNum, wordNum);
+    }
+
+    public Word(Integer type, String value, Integer lineNum, Integer wordNum){
         this.type = type;
         this.value = value;
-        this.varableType = -1;
+        this.lineNum = lineNum;
+		this.wordNum = wordNum;
     }
 
     public Integer getType() {
@@ -29,14 +35,6 @@ public class Word {
 
     public void setType(Integer type) {
         this.type = type;
-    }
-
-    public Integer getVarableType() {
-        return varableType;
-    }
-
-    public void setVarableType(Integer varableType) {
-        this.varableType = varableType;
     }
 
     public void setValue(String value) {

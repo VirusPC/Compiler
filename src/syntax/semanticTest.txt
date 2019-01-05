@@ -1,0 +1,32 @@
+//1 文法开始
+program->69_74_23_24_25_statements_26
+
+//2 赋值
+assign->90_4_arithmetic
+
+//3~11 数学表达式
+arithmetic->T_0_arithmetic
+arithmetic->T_1_arithmetic
+arithmetic->T
+T->F_2_T
+T->F_3_T
+T->F
+F->23_arithmetic_24
+F->90
+F->91
+
+//12 赋值语句
+assignment->assign_22
+
+//13~16 变量声明
+//int
+definition->56_90_4_arithmetic_22
+//char
+definition->43_90_4_92_22
+//bool
+definition->76_90_4_arithmetic_22
+
+
+
+statements->statement_statements|empty
+statement->definition|assignment

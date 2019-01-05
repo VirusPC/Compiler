@@ -9,22 +9,15 @@ import java.util.Map;
 
 
 public class Lexer {
-
-    /**
-     * Œƒº˛ª∫≥Â«¯¥Û–°
-     */
-    public static final int MAX_BUFFER_SIZE = 1024;
-
     
 
     private String sourceFilePath;
-    public char[] buffer = new char[MAX_BUFFER_SIZE];
-    private int off = 0;
-    private int numInBuffer = 0;
-    private int pos = 0;
-
+    private int pos;
+    private int lineNum;
+	private int wordNum;
 
     private List<Word> wordStream = new ArrayList();
+	private List<char[]> lines;
 
 
 
@@ -38,23 +31,22 @@ public class Lexer {
 
 
     private Character getCh(){
-        if(pos>=numInBuffer) {
-            return null;
-        }
-        return buffer[pos++];
+       char[] line = lines.get(lineNum-1);
+	   if(pos>=line.length){return null;}
+	   return line[pos++];
     }
 
     private boolean getBuffer(){
+		lines = new ArrayList<char[]>();
+		String line = null;
         try {
             FileReader fr = new FileReader(sourceFilePath);
             BufferedReader br = new BufferedReader(fr);
-            numInBuffer = br.read(buffer, off, MAX_BUFFER_SIZE);
+            while((line=br.readLine())!=null){
+				lines.add(line.toCharArray());
+			}
             br.close();
             fr.close();
-            if(numInBuffer == -1){
-                return false;
-            }
-            off += MAX_BUFFER_SIZE;
         } catch (Exception e) {
             System.out.println("Source File Error");
         }
@@ -63,12 +55,17 @@ public class Lexer {
 
 
     /**
-     * “ª¥Œ…®√Ë£¨µ√≥ˆ“ª∏ˆµ•¥ 
+     * “ªÔøΩÔøΩ…®ÔøΩË£¨ÔøΩ√≥ÔøΩ“ªÔøΩÔøΩÔøΩ
      * @return
      */
     private boolean scan(){
         String token = "";
         Character c = getCh();
+
+        if(c==null){
+            return false;
+        }
+
         while(c=='\r' || c=='\n' || c==' ' || c=='\t'){
             c = getCh();
         }
@@ -77,7 +74,7 @@ public class Lexer {
         }
         if(Character.isLetter(c)){
             /**
-             * πÿº¸◊÷ªÚ±Í ∂∑˚
+             * ÔøΩÿºÔøΩÔøΩ÷ªÔøΩÔøΩ ∂ÔøΩÔøΩ
              */
             while(c!=null&&   (Character.isLetter(c) || Character.isDigit(c))   ) {
                 token = token.concat(String.valueOf(c));
@@ -94,38 +91,37 @@ public class Lexer {
             }
 
             if(type!=null) {
-                wordStream.add(new Word(type));
+                wordStream.add(new Word(type, lineNum, wordNum));
             } else {
-                wordStream.add(new Word(Identifier.Id.getId(), token));
+                wordStream.add(new Word(Identifier.Id.getId(), token, lineNum, wordNum));
             }
             if(c==null){
                 return false;
             }
         } else if(Character.isDigit(c)) {
             /**
-             * ≥£ ˝
+             * ÔøΩÔøΩÔøΩÔøΩ
              */
             while(c!=null&&Character.isDigit(c)){
                 token = token.concat(String.valueOf(c));
                 c = getCh();
             }
-            wordStream.add(new Word(Constant.Num.getId(), token));
+            wordStream.add(new Word(Constant.Num.getId(), token, lineNum, wordNum));
             if(c==null){
                 return false;
             }
             pos--;
         } else{
             /**
-             * ‘ÀÀ„∑˚ªÚΩÁ∑˚
+             * ÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ
              */
             Word word = null;
             /**
-             * ΩÁ∑˚
+             * ÔøΩÔøΩÔøΩ
              */
             for(Delimiter d : Delimiter.values()){
                 if(d.getName().equals(String.valueOf(c))){
-                    word = new Word(d.getId());
-                    wordStream.add(word);
+                    word = new Word(d.getId(), lineNum, wordNum);
                     break;
                 }
             }
@@ -135,34 +131,34 @@ public class Lexer {
                     case '+':
                         c = getCh();
                         if (c == Operator.Plus.getName().charAt(0)) {
-                            wordStream.add(new Word(Operator.SelfAdd.getId()));
+                            word = new Word(Operator.SelfAdd.getId(), lineNum, wordNum);
                         } else {
                             pos--;
-                            wordStream.add(new Word(Operator.Plus.getId()));
+                            word = new Word(Operator.Plus.getId(), lineNum, wordNum);
                         }
                         break;
                     case '-':
                         c = getCh();
                         if (c == Operator.Minus.getName().charAt(0)) {
-                            wordStream.add(new Word(Operator.SelfSub.getId()));
+                            word = new Word(Operator.SelfSub.getId(), lineNum, wordNum);
                         } else {
                             pos--;
-                            wordStream.add(new Word(Operator.Minus.getId()));
+                            word = new Word(Operator.Minus.getId(), lineNum, wordNum);
                         }
                         break;
                     case '*':
-                        wordStream.add(new Word(Operator.Mul.getId()));
+                        word = new Word(Operator.Mul.getId(), lineNum, wordNum);
                         break;
                     case '/':
-                        wordStream.add(new Word(Operator.Div.getId()));
+                        word = new Word(Operator.Div.getId(), lineNum, wordNum);
                         break;
                     case '<':
                         c = getCh();
                         if (c == Operator.Equal.getName().charAt(0)) {
-                            wordStream.add(new Word(Operator.LE.getId()));
+                            word = new Word(Operator.LE.getId(), lineNum, wordNum);
                         } else {
                             pos--;
-                            wordStream.add(new Word(Operator.Less.getId()));
+                            word = new Word(Operator.Less.getId(), lineNum, wordNum);
                         }
                         break;
                     case '>':
@@ -171,25 +167,25 @@ public class Lexer {
                             wordStream.add(new Word(Operator.ME.getId()));
                         } else {
                             pos--;
-                            wordStream.add(new Word(Operator.More.getId()));
+                            word = new Word(Operator.More.getId(), lineNum, wordNum);
                         }
                         break;
                     case '!':
                         c = getCh();
                         if (c == Operator.Equal.getName().charAt(0)) {
-                            wordStream.add(new Word(Operator.NE.getId()));
+                            word = new Word(Operator.NE.getId(), lineNum, wordNum);
                         } else {
                             pos--;
-                            wordStream.add(new Word(Operator.Not.getId()));
+                            word = new Word(Operator.Not.getId(), lineNum, wordNum);
                         }
                         break;
                     case '=':
                         c = getCh();
                         if (c == Operator.Equal.getName().charAt(0)) {
-                            wordStream.add(new Word(Operator.DEqual.getId()));
+                            word = new Word(Operator.DEqual.getId(), lineNum, wordNum);
                         } else {
                             pos--;
-                            wordStream.add(new Word(Operator.Equal.getId()));
+                            word = new Word(Operator.Equal.getId(), lineNum, wordNum);
                         }
                         break;
                     case '&':
@@ -197,9 +193,9 @@ public class Lexer {
                         c = getCh();
                         token += c;
                         if (token.equals(Operator.And.getName())) {
-                            wordStream.add(new Word(Operator.And.getId()));
+                            word = new Word(Operator.And.getId(), lineNum, wordNum);
                         } else {
-                            System.out.println("error");
+                            System.err.println("Á¨¨"+lineNum+"Ë°åÔºåÁ¨¨"+wordNum+"‰∏™ÂçïËØçÈîôËØØ");
                             pos--;
                         }
                         break;
@@ -208,26 +204,33 @@ public class Lexer {
                         c = getCh();
                         token += c;
                         if (token.equals(Operator.Or.getName())) {
-                            wordStream.add(new Word(Operator.Or.getId()));
+                            word = new Word(Operator.Or.getId(), lineNum, wordNum);
                         } else {
-                            System.out.println("error");
+                            System.err.println("Á¨¨"+lineNum+"Ë°åÔºåÁ¨¨"+wordNum+"‰∏™ÂçïËØçÈîôËØØ");
                             pos--;
                         }
                         break;
                     default:
-                        System.err.println("Wrong Symbol: " + c.toString());
+                        System.err.println("Á¨¨"+lineNum+"Ë°åÔºåÁ¨¨"+wordNum+"‰∏™ÂçïËØçÈîôËØØ");
                 }
             }
-        }// else if() {}
+            wordStream.add(word);
+        }
         if(getCh()==null){
             return false;
         }
         pos--;
+		wordNum++;
         return true;
     }
 
     private void analyse(){
-        while(scan()){}
+        for(int i=1; i<=lines.size(); i++){
+			pos=0;
+			lineNum = i;
+			wordNum = 1;
+			while(scan()){ }
+		}
     }
 
 

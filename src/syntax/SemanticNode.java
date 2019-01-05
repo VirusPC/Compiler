@@ -1,9 +1,9 @@
-package lexis;
+package syntax;
 
 public class SemanticNode {
     private Integer type;
     private String name;
-    private String palce;
+    private String place;
     private Integer fc;
     private Integer tc;
 
@@ -23,12 +23,12 @@ public class SemanticNode {
         this.name = name;
     }
 
-    public String getPalce() {
-        return palce;
+    public String getPlace() {
+        return place;
     }
 
-    public void setPalce(String palce) {
-        this.palce = palce;
+    public void setPlace(String place) {
+        this.place = place;
     }
 
     public Integer getFc() {
