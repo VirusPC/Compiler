@@ -55,7 +55,7 @@ public class Lexer {
 
 
     /**
-     * һ��ɨ�裬�ó�һ���
+     * 扫描一次读出一个单词
      * @return
      */
     private boolean scan(){
@@ -74,7 +74,7 @@ public class Lexer {
         }
         if(Character.isLetter(c)){
             /**
-             * �ؼ��ֻ��ʶ��
+             *首字符为字母，为标识符或保留字
              */
             while(c!=null&&   (Character.isLetter(c) || Character.isDigit(c))   ) {
                 token = token.concat(String.valueOf(c));
@@ -100,7 +100,7 @@ public class Lexer {
             }
         } else if(Character.isDigit(c)) {
             /**
-             * ����
+             * 为数字
              */
             while(c!=null&&Character.isDigit(c)){
                 token = token.concat(String.valueOf(c));
@@ -113,11 +113,11 @@ public class Lexer {
             pos--;
         } else{
             /**
-             * ��������
+             * 首字符为特殊符号
              */
             Word word = null;
             /**
-             * ���
+             * 界符
              */
             for(Delimiter d : Delimiter.values()){
                 if(d.getName().equals(String.valueOf(c))){
@@ -126,6 +126,9 @@ public class Lexer {
                 }
             }
 
+            /**
+            操作符
+             */
             if(word == null) {
                 switch (c) {
                     case '+':

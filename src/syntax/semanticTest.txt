@@ -18,7 +18,7 @@ F->91
 //12 赋值语句
 assignment->assign_22
 
-//13~16 变量声明
+//13~15 变量声明
 //int
 definition->56_90_4_arithmetic_22
 //char
@@ -26,7 +26,43 @@ definition->43_90_4_92_22
 //bool
 definition->76_90_4_arithmetic_22
 
+16-23
+E->arithmetic
+E->arithmetic_5_arithmetic
+E->arithmetic_6_arithmetic
+E->arithmetic_7_arithmetic
+E->arithmetic_8_arithmetic
+E->arithmetic_9_arithmetic
+E->23_E_24
+E->10_E
 
+//24
+EE->E
+Eand->E_12
+EE->Eand_EE
+Eor->E_13
+EE->Eor_EE
 
+//29-35
+//if条件语句
+control->if_25_statements_26
+control->if_25_statements_26_else_25_statements_26
+if->55_23_EE_24
+else->49
+//while循环
+control->while_25_statements_26
+while->71_23_EE_24
+//for循环
+control->53_23_assign_22_compare_22_selfAddSub_24_25_statements_26
+
+//36~38
+//功能函数
+//printf
+control->72_23_printable_24_22
+//scanf
+control->73_23_90_24_22
+printable->90|92|arithmetic
+
+//39~40
 statements->statement_statements|empty
-statement->definition|assignment
+statement->definition|assignment|control

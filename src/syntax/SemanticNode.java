@@ -6,6 +6,8 @@ public class SemanticNode {
     private String place;
     private Integer fc;
     private Integer tc;
+    private Integer chain;
+    private Integer quad;
 
     public Integer getType() {
         return type;
@@ -45,5 +47,21 @@ public class SemanticNode {
 
     public void setTc(Integer tc) {
         this.tc = tc;
+    }
+
+    public Integer getQuad(){
+        return quad;
+    }
+
+    public void setQuad(Integer quad){
+        this.quad = quad;
+    }
+
+    public Integer getChain(){
+        return chain;
+    }
+
+    public void setChain(Integer chain){
+        this.chain = chain;
     }
 }

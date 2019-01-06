@@ -9,7 +9,7 @@ public enum Reserve {
     Float(12), For(13), Goto(14), If(15), Int(16), Long(17), Register(18),
     Return(19), Short(20), Signed(21), Sizeof(22), Static(23), Struct(24),
     Switch(25), Typedef(26), Union(27), Usigned(28), Void(29), Volatile(30), While(31),
-    Printf(32), Scanf(33), Main(34), Over(35), Bool(36);
+    Printf(32), Scanf(33), Main(34), Over(35), Bool(36), Begin(37), End(38), Then(39);
     private int id;
     Reserve(int id){
         this.id = id+40;

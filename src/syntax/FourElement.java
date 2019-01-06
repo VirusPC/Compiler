@@ -1,4 +1,4 @@
-package intermediate;
+package syntax;
 
 public class FourElement {
     private Integer id;
