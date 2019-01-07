@@ -1,10 +1,10 @@
 package lexis;
 
 public class Word {
-    private Integer type;
-    private Integer lineNum;
-	private Integer wordNum;
-    private String value;
+    private Integer type; //类型
+    private Integer lineNum; //所在行数
+	private Integer wordNum; //单词所在位数
+    private String value; //值（只有关键字和常量有值）
 
     public Word(){
 

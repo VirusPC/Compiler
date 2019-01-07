@@ -1,11 +1,7 @@
 package assembly;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import java.io.*;
+import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -19,13 +15,13 @@ import syntax.Info;
  */
 public class Asm {
 	
-	private ArrayList<String> asmCodeList;
-	private ArrayList<FourElement> fourElemList;
+	private List<String> asmCodeList;
+	private List<FourElement> fourElemList;
 	private Map<String, Info> symbolTable;
 	/**
 	 * @param fourElemList //四元式
 	 */
-	public Asm(ArrayList<FourElement> fourElemList,Map<String, Info> symbolTable) {
+	public Asm(List<FourElement> fourElemList,Map<String, Info> symbolTable) {
 	    asmCodeList=new ArrayList<String>();
 		this.fourElemList=fourElemList;
 		this.symbolTable = symbolTable;
@@ -36,70 +32,71 @@ public class Asm {
 	}
 	
 	
-	
-	/**
-	 * 获取asm文件地址
-	 * @return
-	 * @throws IOException
-	 */
-	public String getAsmFile() throws IOException {
-		
-		File file = new File("./result/");
-		if (!file.exists()) {
-			file.mkdirs();
-			file.createNewFile();// 如果这个文件不存在就创建它
-		}
-		String path = file.getAbsolutePath();
-		FileOutputStream fos = new FileOutputStream(path + "/c_to_asm.asm");
-		BufferedOutputStream bos = new BufferedOutputStream(fos);
-		OutputStreamWriter osw1 = new OutputStreamWriter(bos, "gbk");
-		PrintWriter pw1 = new PrintWriter(osw1);
-		
-		for(int i=0;i<asmCodeList.size();i++)
-			pw1.println(asmCodeList.get(i));
-		
-		pw1.close();
-		return path + "/c_to_asm.asm";
-		
-	}
+//
+//	/**
+//	 * 获取asm文件地址
+//	 * @return
+//	 * @throws IOException
+//	 */
+//	public String getAsmFile() throws IOException {
+//
+//		File file = new File("./result/");
+//		if (!file.exists()) {
+//			file.mkdirs();
+//			file.createNewFile();// 如果这个文件不存在就创建它
+//		}
+//		String path = file.getAbsolutePath();
+//		FileOutputStream fos = new FileOutputStream(path + "/c_to_asm.asm");
+//		BufferedOutputStream bos = new BufferedOutputStream(fos);
+//		OutputStreamWriter osw1 = new OutputStreamWriter(bos, "gbk");
+//		PrintWriter pw1 = new PrintWriter(osw1);
+//
+//		for(int i=0;i<asmCodeList.size();i++)
+//			pw1.println(asmCodeList.get(i));
+//
+//		pw1.close();
+//		return path + "/c_to_asm.asm";
+//
+//	}
 
 
-	
-	
+
+
 	/**
 	 * 汇编头部
 	 */
 	public void asmHead() {
 
-		//添加数据段代码 
+		//添加数据段代码
 		asmCodeList.add("datasg segment");
 		for (String name : symbolTable.keySet()) {
 			asmCodeList.add("    "+name + " dw 0");
 		}
-		
+
 		for (int i = 0; i < fourElemList.size(); i++) {
 			if(fourElemList.get(i).getOp().equals("printf")){
-			 
-				asmCodeList.add("printf_"+fourElemList.get(i).getArg1()+(i)+" db '"+fourElemList.get(i).getArg1()+":$'");
-				
+
+				asmCodeList.add("    printf_"+fourElemList.get(i).getArg1()+(i)+" db '"+fourElemList.get(i).getArg1()+":$'");
+
 			}else if(fourElemList.get(i).getOp().equals("scanf")){
-				asmCodeList.add("scanf_"+fourElemList.get(i).getArg1()+(i)+" db 'input "+fourElemList.get(i).getArg1()+":$'");
+				asmCodeList.add("    scanf_"+fourElemList.get(i).getArg1()+(i)+" db 'input "+fourElemList.get(i).getArg1()+":$'");
 			}
 		}
-		
+
 
 			asmCodeList.add("datasg ends");
+			asmCodeList.add("");
 			asmCodeList.add("codesg segment");
 			asmCodeList.add("assume cs:codesg,ds:datasg");
 			asmCodeList.add("start:");
 			asmCodeList.add("    mov AX,datasg");
 			asmCodeList.add("    mov DS,AX");
-		 
-		    
+
+
 	}
-	
-	
-	
+
+
+
 	/**
 	 *  生成代码段代码
 	 * @param
@@ -194,7 +191,6 @@ public class Asm {
             }else if (fourElement.getOp().equals("j==") ){
                 asmCodeList.add("L" + (i) + ": cmp " + fourElement.getArg1()+", "+ fourElement.getArg2());
                 asmCodeList.add("    je "+fourElement.getResult());
-
             }
 
 			else if (fourElement.getOp().equals("printf")) {
@@ -202,7 +198,7 @@ public class Asm {
 				asmCodeList.add(";printf");
 				asmCodeList.add("L" + (i) + ":");
 				asmCodeList.add("    lea dx,printf_"+fourElement.getArg1()+(i));
-				asmCodeList.add("    mov ah,9");
+				asmCodeList.add("    mov ah,9"); //9号功能输入
 				asmCodeList.add("    int 21h");
 
 				asmCodeList.add("    mov ax,"+fourElement.getArg1());
@@ -332,7 +328,23 @@ public class Asm {
     }
 
     public void writeAsmToFile(String filePath, String fileName){
-
+        try {
+            File outputFile = new File(filePath, fileName);
+            if(!outputFile.exists()){
+                outputFile.createNewFile();
+            }
+            PrintWriter pr = new PrintWriter(outputFile.getPath());
+            for(String asmCode : asmCodeList) {
+                pr.println(asmCode);
+            }
+            pr.close();
+        } catch (FileNotFoundException e) {
+            System.out.println("file not exist");
+            e.printStackTrace();
+        } catch (IOException e) {
+            System.out.println("io exception");
+            e.printStackTrace();
+        }
     }
 	
 	

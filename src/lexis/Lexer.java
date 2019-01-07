@@ -12,31 +12,39 @@ public class Lexer {
     
 
     private String sourceFilePath;
-    private int pos;
-    private int lineNum;
-	private int wordNum;
+    private int pos; // 要读取的下一个字符的位置
+    private int lineNum; //当前行数
+	private int wordNum; //记录单词是该行的第几个
 
-    private List<Word> wordStream = new ArrayList();
-	private List<char[]> lines;
-
-
+    private List<Word> wordStream = new ArrayList(); //单词流
+	private List<char[]> lines; //保存读入的代码
 
 
+    /**
+     * 构造方法
+     * @param sourceFilePath 源代码路径
+     */
     public Lexer(String sourceFilePath){
         this.sourceFilePath = sourceFilePath;
-        getBuffer();
+        readFile();
         analyse();
-        int i = 0;
     }
 
 
+    /**
+     * 获取下一个字符
+     * @return 下一个字符
+     */
     private Character getCh(){
        char[] line = lines.get(lineNum-1);
 	   if(pos>=line.length){return null;}
 	   return line[pos++];
     }
 
-    private boolean getBuffer(){
+    /**
+     * 读取文件
+     */
+    private void readFile(){
 		lines = new ArrayList<char[]>();
 		String line = null;
         try {
@@ -50,7 +58,6 @@ public class Lexer {
         } catch (Exception e) {
             System.out.println("Source File Error");
         }
-        return true;
     }
 
 
@@ -228,22 +235,30 @@ public class Lexer {
     }
 
     private void analyse(){
+        /**
+         * 逐行扫描
+         */
         for(int i=1; i<=lines.size(); i++){
 			pos=0;
 			lineNum = i;
 			wordNum = 1;
-			while(scan()){ }
+			while(scan()){ } //扫描该行，扫描一次获取一个单词
 		}
     }
 
-
+    /**
+     * 获取单词流
+     * @return 单词流
+     */
     public List getWordStream(){
         Word over = new Word(Reserve.Over.getId());
         wordStream.add(over);
         return wordStream;
     }
 
-
+    /**
+     * 打印单词流
+     */
     public void printWordStream(){
         for(Word w : wordStream){
             System.out.println("( "+w.getType() + ",  " + w.getValue()+" )");

@@ -1,10 +1,10 @@
 package syntax;
 
 public class FourElement {
-    private String op;
-    private String arg1;
-    private String arg2;
-    private String result;
+    private String op; //操作符
+    private String arg1; //;参数1
+    private String arg2; //参数2
+    private String result; //结果
 
     public FourElement(String op, String arg1, String arg2, String result) {
         this.op = op;

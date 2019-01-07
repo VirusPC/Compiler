@@ -6,8 +6,10 @@ public enum Delimiter {
      */
     Comma(0, ","), Colon(1, ":"), Semicolon(2, ";"), LParen(3, "("), RParen(4, ")"),
     LBrace(5, "{"), RBrace(6, "}");
+
     private int id;
     private String name;
+
     Delimiter(int id, String name){
         this.id = id+20;
         this.name = name;
