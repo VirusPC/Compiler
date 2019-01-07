@@ -39,11 +39,11 @@ public class Parser {
     private Stack<String> symbolStack;//符号栈
     private Stack<Integer> stateStack;//状态栈
     private Stack<SemanticNode> semanticStack; //语义栈
-    private Map<String, Info> symbolTable;
-    private List<FourElement> fourElementList;
-    private Map<Integer, Integer> fourElementChain;
-    private Integer tempCount = 1;
-    private Integer nxq=0;
+    private Map<String, Info> symbolTable; //符号表
+    private List<FourElement> fourElementList; //四元式列表
+    private Map<Integer, Integer> fourElementChain; //四元式链
+    private Integer tempCount = 1; //临时变量计数
+    private Integer nxq=0; //下一条四元式序号
 
 
 
@@ -699,7 +699,7 @@ public class Parser {
             }
 
         }
-
+        fill();
 
 
         System.out.println("\n success!");
@@ -750,17 +750,37 @@ public class Parser {
     private String newTemp(){
         return "T"+(tempCount++).toString();
     }
+
+    /**
+     * 生成四元式，无参数
+     * @param op
+     * @param result
+     */
     private void generate(String op, String result){
         FourElement fourElement = new FourElement(op, "_", "_", result);
         fourElementList.add(fourElement);
         nxq++;
     }
 
+    /**
+     * 生成四元式，一个参数
+     * @param op
+     * @param arg1
+     * @param result
+     */
     private void generate(String op, String arg1, String result){
         FourElement fourElement = new FourElement(op, arg1, "_", result);
         fourElementList.add(fourElement);
         nxq++;
     }
+
+    /***
+     * 生成四元式，两个参数
+     * @param op
+     * @param arg1
+     * @param arg2
+     * @param result
+     */
     private void generate(String op, String arg1, String arg2, String result){
         FourElement fourElement = new FourElement(op, arg1, arg2, result);
         fourElementList.add(fourElement);
@@ -774,15 +794,23 @@ public class Parser {
      */
     private void backpatch(Integer head, Integer result){
         if(head>=fourElementList.size()||head<0){
+
             return;
         }
         String resultString = String.valueOf(result);
-		while(head!=null){
+
+        while(head!=null){
 			fourElementList.get(head).setResult(String.valueOf(resultString));
 			head = fourElementChain.get(head);
 		}
     }
 
+    /**
+     * 将rear链接到front链之后
+     * @param rear
+     * @param front
+     * @return
+     */
     private Integer merge(Integer rear, Integer front){
         Integer pos = front;
         while(fourElementChain.get(pos)!=null){
@@ -792,7 +820,23 @@ public class Parser {
         return front;
     }
 
+    /**
+     * 获取符号表
+     * @return
+     */
+    public Map<String, Info> getSymbolTable(){
+        return symbolTable;
+    }
 
+
+    public List<FourElement> getFourElementList(){
+        return fourElementList;
+    }
+
+    /**
+     * 语义子程序
+     * @param id 文法序号
+     */
     private void subroutine(Integer id){
         switch (id) {
             //赋值
@@ -1121,13 +1165,19 @@ public class Parser {
             case 37:
                 SemanticNode printable = semanticStack.pop();
                 String pName = printable.getPlace();
-                generate("print", pName, "_", "_");
-                SemanticNode sn = new SemanticNode();
-                sn.setChain(-1);
-                semanticStack.push(sn);
+                generate("printf", pName, "_");
+                SemanticNode sn37 = new SemanticNode();
+                sn37.setChain(-1);
+                semanticStack.push(sn37);
                 break;
             //control->73_23_90_24_22
             case 38:
+                SemanticNode id38 = semanticStack.pop();
+                String iName38 = id38.getPlace();
+                generate("scanf", iName38, "_");
+                SemanticNode sn38 = new SemanticNode();
+                sn38.setChain(-1);
+                semanticStack.push(sn38);
                 break;
 
 
@@ -1155,11 +1205,6 @@ public class Parser {
                 break;
             default:
         }
-    }
-
-
-    public void setSymbolTable(Map<String, Info> symbolTable) {
-        this.symbolTable = symbolTable;
     }
 
 
@@ -1224,6 +1269,15 @@ public class Parser {
 //        System.out.println();
 //    }
 //
+
+    public void fill(){
+        for(FourElement fourElement: fourElementList){
+            if(fourElement.getResult().equals("-1")){
+                fourElement.setResult(String.valueOf(fourElementList.size()-1));
+            }
+        }
+    }
+
     /**
      * 打印Action表
      */
@@ -1295,8 +1349,9 @@ public class Parser {
      */
     public void printFourElementList(){
         System.out.println("******************四元式********************");
-        for(FourElement e : fourElementList){
-            System.out.println("("+e.getOp()+", "+e.getArg1()+", "+e.getArg2()+", "+e.getResult()+")");
+        for(int i=0; i<fourElementList.size(); i++){
+            FourElement e = fourElementList.get(i);
+            System.out.println(i+":  ("+e.getOp()+", "+e.getArg1()+", "+e.getArg2()+", "+e.getResult()+")");
         }
     }
 

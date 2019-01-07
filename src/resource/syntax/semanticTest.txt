@@ -26,7 +26,7 @@ definition->43_90_4_92
 //bool
 definition->76_90_4_arithmetic
 
-16-23
+16-23 ²¼¶ûÔªËØ
 E->arithmetic
 E->arithmetic_5_arithmetic
 E->arithmetic_6_arithmetic
@@ -36,7 +36,7 @@ E->arithmetic_9_arithmetic
 E->23_E_24
 E->10_E
 
-//24
+//24 ²¼¶û
 EE->E
 Eand->E_12
 EE->Eand_EE
