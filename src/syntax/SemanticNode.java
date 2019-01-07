@@ -2,7 +2,6 @@ package syntax;
 
 public class SemanticNode {
     private Integer type;
-    private String name;
     private String place;
     private Integer fc;
     private Integer tc;
@@ -17,13 +16,6 @@ public class SemanticNode {
         this.type = type;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
 
     public String getPlace() {
         return place;

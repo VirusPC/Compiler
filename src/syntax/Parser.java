@@ -711,22 +711,23 @@ public class Parser {
         Info info = null;
         SemanticNode sn = null;
         String name = null;
+
         if(parsedWord.getType().equals(Constant.Num.getId())){
             info = new Info(Kind.Constant, Reserve.Int.getId());
             name = parsedWord.getValue();
-            symbolTable.put(name, info);
+            if(symbolTable.get(name)==null){ symbolTable.put(name, info);}
             sn = new SemanticNode();
             sn.setPlace(name);
         } else if(parsedWord.getType().equals(Constant.Char.getId())){
             info = new Info(Kind.Constant, Reserve.Char.getId());
             name = parsedWord.getValue();
-            symbolTable.put(name, info);
+            if(symbolTable.get(name)==null){ symbolTable.put(name, info);}
             sn = new SemanticNode();
             sn.setPlace(name);
         } else if(parsedWord.getType().equals(Identifier.Id.getId())){
             info = new Info(Kind.Variable);
             name = parsedWord.getValue();
-            symbolTable.put(name, info);
+            if(symbolTable.get(name)==null){ symbolTable.put(name, info);}
             sn = new SemanticNode();
             sn.setPlace(name);
         } else if(parsedWord.getType() .equals( Reserve.Int.getId())
@@ -750,17 +751,20 @@ public class Parser {
         return "T"+(tempCount++).toString();
     }
     private void generate(String op, String result){
-        FourElement fourElement = new FourElement(nxq++, op, "_", "_", result);
+        FourElement fourElement = new FourElement(op, "_", "_", result);
         fourElementList.add(fourElement);
+        nxq++;
     }
 
     private void generate(String op, String arg1, String result){
-        FourElement fourElement = new FourElement(nxq++, op, arg1, "_", result);
+        FourElement fourElement = new FourElement(op, arg1, "_", result);
         fourElementList.add(fourElement);
+        nxq++;
     }
     private void generate(String op, String arg1, String arg2, String result){
-        FourElement fourElement = new FourElement(nxq++, op, arg1, arg2, result);
+        FourElement fourElement = new FourElement(op, arg1, arg2, result);
         fourElementList.add(fourElement);
+        nxq++;
     }
 
     /**
@@ -769,6 +773,9 @@ public class Parser {
      * @param result
      */
     private void backpatch(Integer head, Integer result){
+        if(head>=fourElementList.size()||head<0){
+            return;
+        }
         String resultString = String.valueOf(result);
 		while(head!=null){
 			fourElementList.get(head).setResult(String.valueOf(resultString));
@@ -799,11 +806,11 @@ public class Parser {
                 }
 				String iName = identifier.getPlace();
 				if(symbolTable.get(iName)==null){
-					System.err.println("identifier not defined");
+				    System.err.print(aName);
+					System.err.println(" identifier not defined");
 				}
 				SemanticNode sn2 = new SemanticNode();
-				sn2.setChain(arithmetic.getChain());
-				//sn2.setQuad(nxq);
+				sn2.setChain(-1);
 				semanticStack.push(sn2);
                 generate("=", aName, "_", iName);
                 break;
@@ -824,6 +831,7 @@ public class Parser {
                 SemanticNode arithmetic3 = new SemanticNode();
                 String temp3 = newTemp();
                 arithmetic3.setPlace(temp3);
+                arithmetic3.setType(Reserve.Int.getId());
                 Info info3 = new Info(Kind.Variable, Reserve.Int.getId());
 				symbolTable.put(temp3, info3);
                 //Integer value3 = Integer.valueOf(arg1_3.getPlace()) + Integer.valueOf(arg2_3.getPlace());
@@ -846,6 +854,7 @@ public class Parser {
                 SemanticNode arithmetic4 = new SemanticNode();
                 String temp4 = newTemp();
                 arithmetic4.setPlace(temp4);
+                arithmetic4.setType(Reserve.Int.getId());
                 Info info4 = new Info(Kind.Variable, Reserve.Int.getId());
 				symbolTable.put(temp4, info4);
                 generate("-", name1_4, name2_4, temp4);
@@ -868,6 +877,7 @@ public class Parser {
                 SemanticNode arithmetic6 = new SemanticNode();
                 String temp6 = newTemp();
                 arithmetic6.setPlace(temp6);
+                arithmetic6.setType(Reserve.Int.getId());
                 Info info6 = new Info(Kind.Variable, Reserve.Int.getId());
 				symbolTable.put(temp6, info6);
 
@@ -890,13 +900,18 @@ public class Parser {
                 SemanticNode arithmetic7 = new SemanticNode();
                 String temp7 = newTemp();
                 arithmetic7.setPlace(temp7);
+                arithmetic7.setType(Reserve.Int.getId());
                 Info info7 = new Info(Kind.Variable, Reserve.Int.getId());
 				symbolTable.put(temp7, info7);
 
                 generate("/", name1_7, name2_7, temp7);
                 semanticStack.push(arithmetic7);
                 break;
-
+//            //赋值
+//            case 12:
+//                SemanticNode sn12 = new SemanticNode();
+//                sn13.setChain(0);
+//                SemanticStack.push(sn13);
             case 13://整型变量定义
                 SemanticNode  arithmetic13= semanticStack.pop();
                 SemanticNode identifier13 = semanticStack.pop();
@@ -915,8 +930,8 @@ public class Parser {
                 symbolTable.put(iName13, info13);
 
                 SemanticNode sn13 = new SemanticNode();
-                //sn13.setQuad(nxq);
-                sn13.setChain(arithmetic13.getChain());
+                sn13.setChain(-1);
+                semanticStack.push(sn13);
                 generate("=", aName13, "_", iName13);
                 break;
 
@@ -944,7 +959,7 @@ public class Parser {
                 semanticStack.push(e17);
                 String temp13 = newTemp();
                 generate("j==", iName1_17, iName2_17, String.valueOf(0));
-                generate("j",String.valueOf(0));
+                generate("j",String.valueOf(-1));
                 break;
             case 18:
                 SemanticNode i2_18 = semanticStack.pop();
@@ -958,7 +973,7 @@ public class Parser {
                 semanticStack.push(e18);
 
                 generate("j<", iName1_18, iName2_18, String.valueOf(0));
-                generate("j",String.valueOf(0));
+                generate("j",String.valueOf(-1));
                 break;
             case 19:
                 SemanticNode i2_19 = semanticStack.pop();
@@ -972,7 +987,7 @@ public class Parser {
                 semanticStack.push(e19);
 
                 generate("j>", iName1_19, iName2_19, String.valueOf(0));
-                generate("j",String.valueOf(0));
+                generate("j",String.valueOf(-1));
                 break;
             case 20:
                 SemanticNode i2_20 = semanticStack.pop();
@@ -986,7 +1001,7 @@ public class Parser {
                 semanticStack.push(e20);
 
                 generate("j<=", iName1_20, iName2_20, String.valueOf(0));
-                generate("j",String.valueOf(0));
+                generate("j",String.valueOf(-1));
                 break;
             case 21:
                 SemanticNode i2_21 = semanticStack.pop();
@@ -1000,7 +1015,7 @@ public class Parser {
                 semanticStack.push(e21);
 
                 generate("j>=", iName1_21, iName2_21, String.valueOf(0));
-                generate("j",String.valueOf(0));
+                generate("j",String.valueOf(-1));
                 break;
 
             case 23:
@@ -1042,27 +1057,103 @@ public class Parser {
                 sn28.setTc(merge(eAnd28.getTc(), e28.getTc()));
                 semanticStack.push(sn28);
                 break;
-            //control->55_23_EE_24_25_statements_26
+            //control->if_25_statements_26
             case 29:
-                SemanticNode statements29 = semanticStack.pop();
-                SemanticNode ee29 = semanticStack.pop();
-                SemanticNode control29 = new SemanticNode();
-                backpatch(ee29.getTc(), statements29.getChain());
-                backpatch(ee29.getFc(), nxq);
-                control29.setChain(ee29.getChain());
-                semanticStack.push(control29);
+                SemanticNode s29 = semanticStack.pop();
+                SemanticNode if29 = semanticStack.pop();
+                SemanticNode sn29 = new SemanticNode();
+                sn29.setChain(merge(if29.getChain(), s29.getChain()));
+                semanticStack.push(sn29);
+                break;
+            //control->tp_25_statements_26
+            case 30:
+                SemanticNode s30 = semanticStack.pop();
+                SemanticNode tp30 = semanticStack.pop();
+                SemanticNode sn30 = new SemanticNode();
+                sn30.setChain(merge(tp30.getChain(), s30.getChain()));
+                semanticStack.push(sn30);
+                break;
+            //tp->if_25_statements_26_49
+            case 31:
+                SemanticNode s31 = semanticStack.pop();
+                SemanticNode if31 = semanticStack.pop();
+                SemanticNode tp31 = new SemanticNode();
+                backpatch(if31.getChain(), nxq);
+                tp31.setChain(merge(s31.getChain(), nxq));
+                generate("j", String.valueOf(-1));
+                semanticStack.push(tp31);
+                break;
+            //if->55_23_EE_24
+            case 32:
+                SemanticNode ee32 = semanticStack.pop();
+                backpatch(ee32.getTc(), nxq);
+                SemanticNode sn32 = new SemanticNode();
+                sn32.setChain(ee32.getFc());
+                semanticStack.push(sn32);
+                break;
+            //control->while_25_statements_26
+            case 33:
+                SemanticNode s33 = semanticStack.pop();
+                SemanticNode while33 = semanticStack.pop();
+                SemanticNode control33 = new SemanticNode();
+                backpatch(s33.getChain(), while33.getQuad());
+                generate("j",while33.getQuad().toString());
+                control33.setChain(while33.getChain());
+                semanticStack.push(control33);
+                break;
+            //while->w_23_EE_24
+            case 34:
+                SemanticNode ee34 = semanticStack.pop();
+                SemanticNode w34 = semanticStack.pop();
+                SemanticNode while34 = new SemanticNode();
+                backpatch(ee34.getTc(),nxq);
+                while34.setChain(ee34.getFc());
+                while34.setQuad(w34.getQuad());
+                semanticStack.push(while34);
+                break;
+            //w->71
+            case 35:
+                SemanticNode w35 = new SemanticNode();
+                w35.setQuad(nxq);
+                semanticStack.push(w35);
+                break;
+            //control->72_23_printable_24_22
+            case 37:
+                SemanticNode printable = semanticStack.pop();
+                String pName = printable.getPlace();
+                generate("print", pName, "_", "_");
+                SemanticNode sn = new SemanticNode();
+                sn.setChain(-1);
+                semanticStack.push(sn);
+                break;
+            //control->73_23_90_24_22
+            case 38:
                 break;
 
 
 
-            //
-            case 39:
-                SemanticNode statements39 = semanticStack.pop();
-                SemanticNode statement39 = semanticStack.pop();
-                statements39.setChain(statement39.getChain());
-                //statements39.setQuad(statement39.getQuad());
+            //statement->definition
+            case 44:
+                SemanticNode sn44 = semanticStack.pop();
+                backpatch(sn44.getChain(), nxq);
+                sn44.setChain(nxq);
+                semanticStack.push(sn44);
                 break;
-				default:
+            //statements->assign
+            case 45:
+                SemanticNode sn45 = semanticStack.pop();
+                backpatch(sn45.getChain(), nxq);
+                sn45.setChain(nxq);
+                semanticStack.push(sn45);
+                break;
+           //statements->control
+            case 46:
+                SemanticNode sn46 = semanticStack.pop();
+                backpatch(sn46.getChain(), nxq);
+                sn46.setChain(nxq);
+                semanticStack.push(sn46);
+                break;
+            default:
         }
     }
 
@@ -1197,6 +1288,16 @@ public class Parser {
             count++;
         }
 
+    }
+
+    /**
+     * 打印四元式
+     */
+    public void printFourElementList(){
+        System.out.println("******************四元式********************");
+        for(FourElement e : fourElementList){
+            System.out.println("("+e.getOp()+", "+e.getArg1()+", "+e.getArg2()+", "+e.getResult()+")");
+        }
     }
 
 

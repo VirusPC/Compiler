@@ -1,26 +1,16 @@
 package syntax;
 
 public class FourElement {
-    private Integer id;
     private String op;
     private String arg1;
     private String arg2;
     private String result;
 
-    public FourElement(Integer id, String op, String arg1, String arg2, String result) {
-        this.id = id;
+    public FourElement(String op, String arg1, String arg2, String result) {
         this.op = op;
         this.arg1 = arg1;
         this.arg2 = arg2;
         this.result = result;
-    }
-
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
     }
 
     public String getOp() {
