@@ -43,19 +43,20 @@ EE->Eand_EE
 Eor->E_13
 EE->Eor_EE
 
-//29-35
+//29-36
 //if条件语句
 control->if_25_statements_26
-control->if_25_statements_26_else_25_statements_26
+control->tp_25_statements_26
+tp->if_25_statements_26_49
 if->55_23_EE_24
-else->49
 //while循环
 control->while_25_statements_26
-while->71_23_EE_24
+while->w_23_EE_24
+w->71
 //for循环
 control->53_23_assign_22_compare_22_selfAddSub_24_25_statements_26
 
-//36~38
+//37~39
 //功能函数
 //printf
 control->72_23_printable_24_22
