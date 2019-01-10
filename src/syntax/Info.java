@@ -1,9 +1,9 @@
 package syntax;
 
 public class Info {
-	private Kind kind;
-    private Integer typeId;
-    private String value;
+	private Kind kind; //种类（常量/变量/类型）
+    private Integer typeId; //类型（整形，字符型，布尔型）
+    private String value; //值
 
     public Info(){super();}
 

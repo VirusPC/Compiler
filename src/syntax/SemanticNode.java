@@ -1,12 +1,12 @@
 package syntax;
 
 public class SemanticNode {
-    private Integer type;
-    private String place;
-    private Integer fc;
-    private Integer tc;
-    private Integer chain;
-    private Integer quad;
+    private Integer type; //类型
+    private String place; //值
+    private Integer fc; //真出口
+    private Integer tc; //假出口
+    private Integer chain; //保留待回填的链头
+    private Integer quad; //保留while后第一个四元式的序号
 
     public Integer getType() {
         return type;

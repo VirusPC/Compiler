@@ -9,17 +9,17 @@ import java.io.IOException;
 import java.util.*;
 
 public class Parser {
-    public static String OVER = Reserve.Over.getId().toString();
-    public static String EMPTY = "empty";//空
-    public static String LINK = "->";//文法连接符
-    public static String SEPARATOR = "|"; //文法分隔符
-    public static String WORD_SEPARATOR = "_"; //单词连接符
+    private static String OVER = Reserve.Over.getId().toString();
+    private static String EMPTY = "empty";//空
+    private static String LINK = "->";//文法连接符
+    private static String SEPARATOR = "|"; //文法分隔符
+    private static String WORD_SEPARATOR = "_"; //单词连接符
     //public static String POINT = "·"; //项目的点
-    public static String EXTEND_START_SYMBOL = "extend"; //扩展开始符
-    public static String SHIFT = "S"; //移进
-    public static String ACC = "acc"; //完成
-    public static String BECOME = "r"; //规约
-    public static int INITIAL_STATE = 0; //初始状态
+    private static String EXTEND_START_SYMBOL = "extend"; //扩展开始符
+    private static String SHIFT = "S"; //移进
+    private static String ACC = "acc"; //完成
+    private static String BECOME = "r"; //规约
+    private static int INITIAL_STATE = 0; //初始状态
 
 
     private List<List<String>> grammars; //文法
@@ -36,8 +36,6 @@ public class Parser {
 
 
     private Word parsedWord;
-    private Stack<String> symbolStack;//符号栈
-    private Stack<Integer> stateStack;//状态栈
     private Stack<SemanticNode> semanticStack; //语义栈
     private Map<String, Info> symbolTable; //符号表
     private List<FourElement> fourElementList; //四元式列表
@@ -49,26 +47,25 @@ public class Parser {
 
     /**
      * 读取文件，根据文件内容生成vn、vt 要求：符合LR(0)文法规则
-     * @param path  文件路径
+     * @param filePath  文件路径
      * @param startSymbol 起始符
      */
-    public Parser(String path, String startSymbol) {
-        createGrammars(path, startSymbol);
+    public Parser(String filePath, String startSymbol) {
+        readGrammars(filePath, startSymbol);
         fillToEmpty();
-        createFirstForVn();
+        createFirstSetForVn();
         createItemSetList();
         createActionAndGoto();
-        int i = 1;
     }
 
 
     /**
      * 读入文法
      *
-     * @param path
+     * @param filePath
      * @param startSymbol
      */
-    private void createGrammars(String path, String startSymbol) {
+    private void readGrammars(String filePath, String startSymbol) {
         this.startSymbol = startSymbol;
         grammars = new ArrayList();
         vnSet = new HashSet<String>();
@@ -76,7 +73,7 @@ public class Parser {
         FileReader fr = null;
         BufferedReader br = null;
         try {
-            fr = new FileReader(path);
+            fr = new FileReader(filePath);
             br = new BufferedReader(fr);
             String line;
             /*
@@ -121,7 +118,7 @@ public class Parser {
             if (vtSet.contains(SEPARATOR)) {
                 vtSet.remove(SEPARATOR);
             }
-            extend();
+            extendGrammars();
         } catch (FileNotFoundException e) {
             System.out.println("File Not Found!");
         } catch (IOException e) {
@@ -144,7 +141,7 @@ public class Parser {
     /**
      *  扩展文法
      */
-    private void extend() {
+    private void extendGrammars() {
         List<String> grammar = new ArrayList<String>();
         grammar.add(EXTEND_START_SYMBOL);
         grammar.add(startSymbol);
@@ -284,48 +281,48 @@ public class Parser {
     Set<String> parsed;
     /**
      * 对每一个文发符号X属于V，计算FIRST(X)
-     * @param parseV
+     * @param parsedV
      * @return
      */
-    private Set<String> firstForOneV(String parseV){
+    private Set<String> firstForOneV(String parsedV){
         Set<String> firstSet = new HashSet<String>();
         // 1.要分析的符号为终结符
-        if(vtSet.contains(parseV) || parseV.equals(OVER)){
-            firstSet.add(parseV);
+        if(vtSet.contains(parsedV) || parsedV.equals(OVER)){
+            firstSet.add(parsedV);
 
             // 2.要分析的符号为非终结符
-        }else if(vnSet.contains(parseV) && !parsed.contains(parseV)){
-            parsed.add(parseV);
+        }else if(vnSet.contains(parsedV) && !parsed.contains(parsedV)){
+            parsed.add(parsedV);
             int oldSize = -1;
             //while(oldSize!=firstSet.size()){
                 oldSize = firstSet.size();
 
                 //找到以该符号为左部的文法
                 for(List<String> grammar : grammars){
-                    if(!parseV.equals(grammar.get(0))){
+                    if(!parsedV.equals(grammar.get(0))){
                         continue;
                     }
                     int pos=1;
-                    String parseVInRight = grammar.get(pos);
-                    if(parseV.equals(parseVInRight)){
+                    String parsedVInRight = grammar.get(pos);
+                    if(parsedV.equals(parsedVInRight)){
                         continue;
                     }
                     // 2. && 3. 右部第一个为终结符或空
-                    if(EMPTY.equals(parseVInRight) || vtSet.contains(parseVInRight)){
-                        firstSet.add(parseVInRight);
+                    if(EMPTY.equals(parsedVInRight) || vtSet.contains(parsedVInRight)){
+                        firstSet.add(parsedVInRight);
                     } else {//4.右部第一个为非终结符
 
-                            while(vnSet.contains(parseVInRight)
-                                    &&toEmpty.get(parseVInRight)==1
+                            while(vnSet.contains(parsedVInRight)
+                                    &&toEmpty.get(parsedVInRight)==1
                                     &&pos<grammar.size()-1
-                                    &&!parsed.contains(parseVInRight)){
-                                parsed.add(parseVInRight);
-                                Set<String> subSet = firstForOneV((parseVInRight));
+                                    &&!parsed.contains(parsedVInRight)){
+                                parsed.add(parsedVInRight);
+                                Set<String> subSet = firstForOneV((parsedVInRight));
                                 subSet.remove(EMPTY);
                                 firstSet.addAll(subSet);
-                                parseVInRight = grammar.get(++pos);
+                                parsedVInRight = grammar.get(++pos);
                             }
-                            firstSet.addAll(firstForOneV(parseVInRight));
+                            firstSet.addAll(firstForOneV(parsedVInRight));
 
                     }
                 }
@@ -338,7 +335,7 @@ public class Parser {
     /**
      * 创建所有非终结符的first集
      */
-    private void createFirstForVn(){
+    private void createFirstSetForVn(){
         firstVn = new HashMap<String, Set<String>>();
         for(String v : vnSet) {
             parsed = new HashSet<String>();
@@ -379,9 +376,9 @@ public class Parser {
     private Set<Item> closure(Item firstItem){
         Set<Item> itemSet = new HashSet<Item>();
         itemSet.add(firstItem);
-        if(firstItem.getGrammarId() == 5){
-            int i = 1;
-        }
+//        if(firstItem.getGrammarId() == 5){
+//            int i = 1;
+//        }
         List<String> grammar = grammars.get(firstItem.getGrammarId());
         //点位于最后时，直接返回
         if(firstItem.getpointPos()>=grammar.size()){
@@ -447,9 +444,9 @@ public class Parser {
             Map<String, Integer> go = new HashMap<String, Integer>();
             int itemSetListCountAtBegin = itemSetList.size();
 
-            if(numOfParsedItemSet == 3){
-                int i123 = 1;
-            }
+//            if(numOfParsedItemSet == 3){
+//                int i123 = 1;
+//            }
             //创建项目集
             for (Item item : itemSet) {
                 List<String> grammar = grammars.get(item.getGrammarId());
@@ -632,8 +629,8 @@ public class Parser {
 
     //分析单词流
     public void parseWordStream(List<Word> wordStream) {
-        symbolStack = new Stack<String>();//符号栈
-        stateStack = new Stack<Integer>();//状态栈
+        Stack<String> symbolStack = new Stack<String>();//符号栈
+        Stack<Integer>  stateStack= new Stack<Integer>();//状态栈
         semanticStack = new Stack<SemanticNode>();//语义栈
         fourElementList = new ArrayList<FourElement>();//四元式列表
         fourElementChain = new HashMap<Integer,Integer>();
@@ -699,8 +696,6 @@ public class Parser {
             }
 
         }
-        fill();
-
 
         System.out.println("\n success!");
     }
@@ -727,7 +722,7 @@ public class Parser {
         } else if(parsedWord.getType().equals(Identifier.Id.getId())){
             info = new Info(Kind.Variable);
             name = parsedWord.getValue();
-            if(symbolTable.get(name)==null){ symbolTable.put(name, info);}
+            //if(symbolTable.get(name)==null){ symbolTable.put(name, info);}
             sn = new SemanticNode();
             sn.setPlace(name);
         } else if(parsedWord.getType() .equals( Reserve.Int.getId())
@@ -743,10 +738,6 @@ public class Parser {
     }
 
 
-	//private String entry(String name){
-		//return symbolTable.get(name).getValue();
-	//}
-	
     private String newTemp(){
         return "T"+(tempCount++).toString();
     }
@@ -792,9 +783,8 @@ public class Parser {
      * @param head
      * @param result
      */
-    private void backpatch(Integer head, Integer result){
-        if(head>=fourElementList.size()||head<0){
-
+    private void backPatch(Integer head, Integer result){
+        if(head>=fourElementList.size()|| head<0 ){
             return;
         }
         String resultString = String.valueOf(result);
@@ -837,8 +827,8 @@ public class Parser {
      * 语义子程序
      * @param id 文法序号
      */
-    private void subroutine(Integer id){
-        switch (id) {
+    private void subroutine(Integer grammarId){
+        switch (grammarId) {
             //赋值
             case 2:
                 SemanticNode  arithmetic= semanticStack.pop();
@@ -974,6 +964,7 @@ public class Parser {
                 symbolTable.put(iName13, info13);
 
                 SemanticNode sn13 = new SemanticNode();
+                sn13.setPlace(identifier13.getPlace());
                 sn13.setChain(-1);
                 semanticStack.push(sn13);
                 generate("=", aName13, "_", iName13);
@@ -1072,7 +1063,7 @@ public class Parser {
             //Eand->E_12
             case 25:
                 SemanticNode sn25 = semanticStack.pop();
-                backpatch(sn25.getTc(), nxq);
+                backPatch(sn25.getTc(), nxq);
                 semanticStack.push(sn25);
                 break;
 
@@ -1089,7 +1080,7 @@ public class Parser {
                 //Eor->E_13
             case 27:
                 SemanticNode sn27 = semanticStack.pop();
-                backpatch(sn27.getFc(), nxq);
+                backPatch(sn27.getFc(), nxq);
                 semanticStack.push(sn27);
                 break;
             //EE->Eor_EE
@@ -1106,6 +1097,7 @@ public class Parser {
                 SemanticNode s29 = semanticStack.pop();
                 SemanticNode if29 = semanticStack.pop();
                 SemanticNode sn29 = new SemanticNode();
+                backPatch(if29.getChain(), s29.getChain());//增加
                 sn29.setChain(merge(if29.getChain(), s29.getChain()));
                 semanticStack.push(sn29);
                 break;
@@ -1122,15 +1114,15 @@ public class Parser {
                 SemanticNode s31 = semanticStack.pop();
                 SemanticNode if31 = semanticStack.pop();
                 SemanticNode tp31 = new SemanticNode();
-                backpatch(if31.getChain(), nxq);
+                backPatch(if31.getChain(), nxq+1);
                 tp31.setChain(merge(s31.getChain(), nxq));
-                generate("j", String.valueOf(-1));
+                generate("j", String.valueOf(nxq+2));
                 semanticStack.push(tp31);
                 break;
             //if->55_23_EE_24
             case 32:
                 SemanticNode ee32 = semanticStack.pop();
-                backpatch(ee32.getTc(), nxq);
+                backPatch(ee32.getTc(), nxq);
                 SemanticNode sn32 = new SemanticNode();
                 sn32.setChain(ee32.getFc());
                 semanticStack.push(sn32);
@@ -1140,7 +1132,7 @@ public class Parser {
                 SemanticNode s33 = semanticStack.pop();
                 SemanticNode while33 = semanticStack.pop();
                 SemanticNode control33 = new SemanticNode();
-                backpatch(s33.getChain(), while33.getQuad());
+                backPatch(s33.getChain(), while33.getQuad());
                 generate("j",while33.getQuad().toString());
                 control33.setChain(while33.getChain());
                 semanticStack.push(control33);
@@ -1150,7 +1142,7 @@ public class Parser {
                 SemanticNode ee34 = semanticStack.pop();
                 SemanticNode w34 = semanticStack.pop();
                 SemanticNode while34 = new SemanticNode();
-                backpatch(ee34.getTc(),nxq);
+                backPatch(ee34.getTc(),nxq);
                 while34.setChain(ee34.getFc());
                 while34.setQuad(w34.getQuad());
                 semanticStack.push(while34);
@@ -1185,23 +1177,30 @@ public class Parser {
             //statement->definition
             case 44:
                 SemanticNode sn44 = semanticStack.pop();
-                backpatch(sn44.getChain(), nxq);
+                backPatch(sn44.getChain(), nxq);
                 sn44.setChain(nxq);
                 semanticStack.push(sn44);
                 break;
             //statements->assign
             case 45:
                 SemanticNode sn45 = semanticStack.pop();
-                backpatch(sn45.getChain(), nxq);
+                backPatch(sn45.getChain(), nxq);
                 sn45.setChain(nxq);
                 semanticStack.push(sn45);
                 break;
            //statements->control
             case 46:
                 SemanticNode sn46 = semanticStack.pop();
-                backpatch(sn46.getChain(), nxq);
+                backPatch(sn46.getChain(), nxq);
                 sn46.setChain(nxq);
                 semanticStack.push(sn46);
+                break;
+            //statements->44_definition
+            case 47:
+                SemanticNode sn47 = semanticStack.pop();
+                String symbol47 = sn47.getPlace();
+                symbolTable.get(symbol47).setKind(Kind.Constant);
+                semanticStack.push(sn47);
                 break;
             default:
         }
@@ -1269,14 +1268,6 @@ public class Parser {
 //        System.out.println();
 //    }
 //
-
-    public void fill(){
-        for(FourElement fourElement: fourElementList){
-            if(fourElement.getResult().equals("-1")){
-                fourElement.setResult(String.valueOf(fourElementList.size()-1));
-            }
-        }
-    }
 
     /**
      * 打印Action表
@@ -1355,6 +1346,18 @@ public class Parser {
         }
     }
 
+    /**
+     * 打印符号表
+     */
+    public void printSymbolTable(){
+        System.out.println("******************符号表********************");
+        System.out.printf("%.8s  %.8s  %.8s\n", "符号名","种类","类型");
+        for(String name : symbolTable.keySet()){
+            Info info = symbolTable.get(name);
+            System.out.printf("%.8s  %.8s  %.8s\n", name,info.getKind().name(),info.getTypeId().toString());
+
+        }
+    }
 
 
 }

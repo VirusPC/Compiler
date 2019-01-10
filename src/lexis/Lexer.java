@@ -3,15 +3,12 @@ package lexis;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 
 public class Lexer {
     
 
-    private String sourceFilePath;
     private int pos; // 要读取的下一个字符的位置
     private int lineNum; //当前行数
 	private int wordNum; //记录单词是该行的第几个
@@ -25,9 +22,9 @@ public class Lexer {
      * @param sourceFilePath 源代码路径
      */
     public Lexer(String sourceFilePath){
-        this.sourceFilePath = sourceFilePath;
-        readFile();
-        analyse();
+        //this.sourceFilePath = sourceFilePath;
+        readFile(sourceFilePath); //将源代码读入lines
+        analyse();//对lines进行分析。将分析得到的Word加入wordStream
     }
 
 
@@ -44,7 +41,7 @@ public class Lexer {
     /**
      * 读取文件
      */
-    private void readFile(){
+    private void readFile(String sourceFilePath){
 		lines = new ArrayList<char[]>();
 		String line = null;
         try {
@@ -90,6 +87,9 @@ public class Lexer {
             pos--;
             Integer type = null;
 
+            /**
+             * 查询是否为保留字
+             */
             for(Reserve r : Reserve.values()){
                 if(r.toString().toLowerCase().equals(String.valueOf(token))){
                     type = r.getId();
@@ -109,7 +109,7 @@ public class Lexer {
             /**
              * 为数字
              */
-            while(c!=null&&Character.isDigit(c)){
+            while(c!=null&&Character.isDigit(c)){ //循环直到下一个不为数字
                 token = token.concat(String.valueOf(c));
                 c = getCh();
             }
@@ -167,7 +167,7 @@ public class Lexer {
                         if (c == Operator.Equal.getName().charAt(0)) {
                             word = new Word(Operator.LE.getId(), lineNum, wordNum);
                         } else {
-                            pos--;
+                            pos--;//后退
                             word = new Word(Operator.Less.getId(), lineNum, wordNum);
                         }
                         break;
@@ -234,6 +234,8 @@ public class Lexer {
         return true;
     }
 
+
+
     private void analyse(){
         /**
          * 逐行扫描
@@ -245,6 +247,8 @@ public class Lexer {
 			while(scan()){ } //扫描该行，扫描一次获取一个单词
 		}
     }
+
+
 
     /**
      * 获取单词流

@@ -16,15 +16,15 @@ F->90
 F->91
 
 //12 赋值语句
-assignment->assign
+assignment->assign_22
 
 //13~15 变量声明
 //int
-definition->56_90_4_arithmetic
+definition->56_90_4_arithmetic_22
 //char
-definition->43_90_4_92
+definition->43_90_4_92_22
 //bool
-definition->76_90_4_arithmetic
+definition->76_90_4_arithmetic_22
 
 16-23 布尔元素
 E->arithmetic
@@ -50,11 +50,6 @@ control->tp_25_statements_26
 tp->if_25_statements_26_49
 
 if->55_23_EE_24
-{SemanticNode ee32 = semanticStack.pop();
-backpatch(ee32.Tc, nxq);
-SemanticNode sn32 = new SemanticNode();
-sn32.setChain(ee32.fc);
-semanticStack.push(sn32);}
 //while循环
 control->while_25_statements_26
 while->w_23_EE_24
@@ -70,7 +65,8 @@ control->72_23_printable_24_22
 control->73_23_90_24_22
 printable->90|92|arithmetic
 
-//42~46
+//42~47
 statements->statement_statements|empty
-statement->definition_22|assignment_22
+statement->definition|assignment
 statement->control
+statement->44_definition
