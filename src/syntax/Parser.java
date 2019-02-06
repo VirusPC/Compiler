@@ -388,11 +388,11 @@ public class Parser {
 
         //取得点后的第一个符号
         String vAfterPoint = grammar.get(firstItem.getpointPos());
-        Set<String> newForwards = new HashSet<String>();
 
         // 只有在点后第一个符号为非终结符时，才继续求闭包
         //if(vAfterPoint))
         if(vnSet.contains(vAfterPoint)){
+            Set<String> newForwards = new HashSet<String>();
             // 取文法中该符号后面的所有符号， 与forward拼接后， 对其求first集 。取并集作为新的forward集
             List<String> remainedVs = grammar.subList(firstItem.getpointPos()+1, grammar.size());
             for(String oldForward : firstItem.getForwards()){
