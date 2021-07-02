@@ -1,0 +1,78 @@
+program->69_74_23_24_25_statements_26
+
+//声明
+constDefinition->44_definition
+definition->type_assignment_22
+type->56|43|76
+assignment->leftAssign_rightAssign
+rightAssign->20_assignment|empty
+leftAssign->90_equals
+equals->4_arithmetic|empty
+
+//赋值
+assign->90_4_arithmetic
+
+//算术运算
+arithmetic->number_addsub
+addsub->0_arithmetic|1_arithmetic|empty
+number->element_muldiv
+muldiv->2_number|3_number|empty
+element->23_arithmetic_24|90|91
+symbol->14|15|empty
+selfAddSub->90_symbol|empty
+
+//布尔
+boolOperation->boolElement_and
+and->12_boolOperation|empty
+boolElement->compare_or
+or->13_boolElement|empty
+compare->element_comSymbol_element|element
+comSymbol->6|7|5|11
+compare->23_boolOperation_24|10_boolOperation
+
+//控制语句
+//if条件语句
+control->55_23_boolOperation_24_25_statements_26_else
+else->49_25_statements_26|empty
+//while循环
+control->71_23_boolOperation_24_25_statements_26
+//for循环
+control->53_23_assign_22_compare_22_selfAddSub_24_25_statements_26
+//赋值语句
+control->assign_22
+
+//功能函数
+//printf
+control->72_23_printable_24_22
+//scanf
+control->73_23_90_24_22
+printable->90|91|92
+
+//复合语句
+statements->statement_statements|empty
+statement->definition|constDefinition|control|assign
+
+element->91
+***************************************************
+
+0
+    Plus(0, "+"), Minus(1, "-"), Mul(2, "*"), Div(3, "/"), Equal(4, "="), DEqual(5, "=="),
+    Less(6, "<"), More(7, ">"), LE(8, "<="), ME(9, ">="), Not(10, "!"),NE(11, "!="),
+    And(12, "&&"), Or(13, "||");
+
+20
+    Comma(0, ","), Colon(1, ":"), Semicolon(2, ";"), LParen(3, "("), RParen(4, ")"),
+    LBrace(5, "{"), RBrace(6, "}");
+40
+    Auto(0), Break(1), Case(2), Char(3), Const(4), Continue(5),
+    Default(6), Do(7), Double(8), Else(9), Enum(10), Extern(11),
+    Float(12), For(13), Goto(14), If(15), Int(16), Long(17), Register(18),
+    Return(19), Short(20), Signed(21), Sizeof(22), Static(23), Struct(24),
+    Switch(25), Typedef(26), Union(27), Usigned(28), Void(29), Volatile(30), While(31)
+    Printf(32), Scanf(33), Main(34), Over(35), Bool(36);
+
+    public static final int IDENTIFIER_ID = 90;
+
+    public static final int NUMBER_ID = 91;
+
+    public static final int LETTER_ID = 92 ;

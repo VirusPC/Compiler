@@ -1,0 +1,15 @@
+main(){
+    const int a = 1;
+    int b = 2;
+    int c = 0;
+    scanf(c);
+    if(1){
+        b = b-a;
+    } else {
+        b = b+a;
+    }
+    while(c) {
+        b = b+1;
+    }
+    printf(b);
+}
